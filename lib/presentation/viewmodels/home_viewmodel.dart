@@ -1,5 +1,11 @@
 import 'package:flutter/foundation.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
 class HomeViewModel extends ChangeNotifier {
-  // Gerenciamento de estado inicial da home
+  final currentTab = signal<int>(0);
+
+  void setTab(int index) {
+    currentTab.value = index;
+    notifyListeners();
+  }
 }
