@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
 import '../../viewmodels/auth_viewmodel.dart';
@@ -46,7 +47,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result case Success()) {
       context.go('/home');
     } else if (result case Failure()) {
-      final msg = _authViewModel.errorMessage.value ?? 'Erro ao realizar login.';
+      final msg =
+          _authViewModel.errorMessage.value ?? 'Erro ao realizar login.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -66,7 +68,8 @@ class _LoginScreenState extends State<LoginScreen> {
     if (result case Success()) {
       context.go('/home');
     } else if (result case Failure()) {
-      final msg = _authViewModel.errorMessage.value ?? 'Erro ao entrar com Google.';
+      final msg =
+          _authViewModel.errorMessage.value ?? 'Erro ao entrar com Google.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),

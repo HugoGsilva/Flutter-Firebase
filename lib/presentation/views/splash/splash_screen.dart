@@ -1,6 +1,8 @@
 import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../../core/di/injection.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
@@ -100,7 +102,10 @@ class _SplashScreenState extends State<SplashScreen> {
               ),
               const SizedBox(height: 8),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 4),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 4,
+                ),
                 decoration: BoxDecoration(
                   color: colorScheme.primary.withValues(alpha: 0.15),
                   borderRadius: BorderRadius.circular(20),
@@ -130,7 +135,9 @@ class _SplashScreenState extends State<SplashScreen> {
                 height: 32,
                 child: CircularProgressIndicator(
                   strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(colorScheme.primary),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    colorScheme.primary,
+                  ),
                 ),
               ),
               const SizedBox(height: 36),

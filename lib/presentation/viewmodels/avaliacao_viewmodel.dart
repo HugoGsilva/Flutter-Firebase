@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../core/command/command.dart';
 import '../../core/result/result.dart';
 import '../../domain/facades/avaliacao_facade.dart';
@@ -16,10 +17,12 @@ class AvaliacaoViewModel extends ChangeNotifier {
     isLoading = signal<bool>(false);
     errorMessage = signal<String?>(null);
 
-    carregarAvaliacaoCommand =
-        Command2<AvaliacaoModel?, String, String>(_carregarAvaliacao);
-    salvarAvaliacaoCommand =
-        Command3<void, String, String, String?>(_salvarAvaliacao);
+    carregarAvaliacaoCommand = Command2<AvaliacaoModel?, String, String>(
+      _carregarAvaliacao,
+    );
+    salvarAvaliacaoCommand = Command3<void, String, String, String?>(
+      _salvarAvaliacao,
+    );
   }
 
   final AvaliacaoFacade _avaliacaoFacade;
@@ -40,7 +43,9 @@ class AvaliacaoViewModel extends ChangeNotifier {
   }
 
   void definirNota(dynamic criterio, int nota) {
-    final String id = criterio is CriterioAvaliacao ? criterio.id : criterio.toString();
+    final String id = criterio is CriterioAvaliacao
+        ? criterio.id
+        : criterio.toString();
     final novoMapa = Map<String, int>.from(notas.value);
     novoMapa[id] = nota;
     notas.value = novoMapa;

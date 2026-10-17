@@ -199,32 +199,38 @@ class FakePreferenceRepository implements PreferenceRepository {
 
 void main() {
   group('Command Tests', () {
-    test('Command0 deve gerenciar estado running, resultado e signal', () async {
-      final cmd = Command0<String>(() async {
-        await Future.delayed(const Duration(milliseconds: 10));
-        return const Success('ok');
-      });
+    test(
+      'Command0 deve gerenciar estado running, resultado e signal',
+      () async {
+        final cmd = Command0<String>(() async {
+          await Future.delayed(const Duration(milliseconds: 10));
+          return const Success('ok');
+        });
 
-      expect(cmd.running, isFalse);
-      expect(cmd.runningSignal.value, isFalse);
-      expect(cmd.completed, isFalse);
+        expect(cmd.running, isFalse);
+        expect(cmd.runningSignal.value, isFalse);
+        expect(cmd.completed, isFalse);
 
-      final future = cmd.execute();
-      expect(cmd.running, isTrue);
-      expect(cmd.runningSignal.value, isTrue);
+        final future = cmd.execute();
+        expect(cmd.running, isTrue);
+        expect(cmd.runningSignal.value, isTrue);
 
-      final res = await future;
-      expect(res.dataOrNull, 'ok');
-      expect(cmd.running, isFalse);
-      expect(cmd.completed, isTrue);
-      expect(cmd.result?.dataOrNull, 'ok');
-    });
+        final res = await future;
+        expect(res.dataOrNull, 'ok');
+        expect(cmd.running, isFalse);
+        expect(cmd.completed, isTrue);
+        expect(cmd.result?.dataOrNull, 'ok');
+      },
+    );
 
-    test('Command callable deve permitir invocação direta como função', () async {
-      final cmd = Command1<int, int>((val) async => Success(val * 2));
-      final res = await cmd(5);
-      expect(res.dataOrNull, 10);
-    });
+    test(
+      'Command callable deve permitir invocação direta como função',
+      () async {
+        final cmd = Command1<int, int>((val) async => Success(val * 2));
+        final res = await cmd(5);
+        expect(res.dataOrNull, 10);
+      },
+    );
   });
 
   group('AuthViewModel Tests', () {
@@ -261,14 +267,20 @@ void main() {
       expect(viewModel.isLoading.value, isFalse);
     });
 
-    test('deve capturar erro e atualizar errorMessage em falha de login', () async {
-      final res = await viewModel.loginCommand('invalido@email.com', '123456');
+    test(
+      'deve capturar erro e atualizar errorMessage em falha de login',
+      () async {
+        final res = await viewModel.loginCommand(
+          'invalido@email.com',
+          '123456',
+        );
 
-      expect(res.isFailure, isTrue);
-      expect(viewModel.currentUser.value, isNull);
-      expect(viewModel.isAuthenticated.value, isFalse);
-      expect(viewModel.errorMessage.value, contains('Credenciais inválidas'));
-    });
+        expect(res.isFailure, isTrue);
+        expect(viewModel.currentUser.value, isNull);
+        expect(viewModel.isAuthenticated.value, isFalse);
+        expect(viewModel.errorMessage.value, contains('Credenciais inválidas'));
+      },
+    );
 
     test('deve cadastrar com sucesso no cadastroCommand', () async {
       final res = await viewModel.cadastroCommand(
@@ -338,24 +350,27 @@ void main() {
       expect(viewModel.pessoasFiltradas.value.length, 2);
     });
 
-    test('deve filtrar pessoas por curso e texto de busca de forma reativa', () async {
-      await viewModel.cadastrarPessoaCommand(pessoa1);
-      await viewModel.cadastrarPessoaCommand(pessoa2);
+    test(
+      'deve filtrar pessoas por curso e texto de busca de forma reativa',
+      () async {
+        await viewModel.cadastrarPessoaCommand(pessoa1);
+        await viewModel.cadastrarPessoaCommand(pessoa2);
 
-      // Filtro por curso
-      viewModel.setFiltroCurso('INFO');
-      expect(viewModel.pessoasFiltradas.value.length, 1);
-      expect(viewModel.pessoasFiltradas.value.first.nome, 'Carlos Drummond');
+        // Filtro por curso
+        viewModel.setFiltroCurso('INFO');
+        expect(viewModel.pessoasFiltradas.value.length, 1);
+        expect(viewModel.pessoasFiltradas.value.first.nome, 'Carlos Drummond');
 
-      // Busca por texto
-      viewModel.setFiltroCurso(null);
-      viewModel.setBuscaTexto('Aninha');
-      expect(viewModel.pessoasFiltradas.value.length, 1);
-      expect(viewModel.pessoasFiltradas.value.first.nome, 'Ana Machado');
+        // Busca por texto
+        viewModel.setFiltroCurso(null);
+        viewModel.setBuscaTexto('Aninha');
+        expect(viewModel.pessoasFiltradas.value.length, 1);
+        expect(viewModel.pessoasFiltradas.value.first.nome, 'Ana Machado');
 
-      viewModel.limparFiltros();
-      expect(viewModel.pessoasFiltradas.value.length, 2);
-    });
+        viewModel.limparFiltros();
+        expect(viewModel.pessoasFiltradas.value.length, 2);
+      },
+    );
 
     test('deve atualizar e remover pessoa com confirmação', () async {
       await viewModel.cadastrarPessoaCommand(pessoa1);
@@ -387,8 +402,9 @@ void main() {
       avaliacaoRepo = FakeAvaliacaoRepository();
       avaliacaoFacade = AvaliacaoFacade(
         salvarAvaliacaoUseCase: SalvarAvaliacaoUseCase(avaliacaoRepo),
-        buscarAvaliacaoUsuarioUseCase:
-            BuscarAvaliacaoUsuarioUseCase(avaliacaoRepo),
+        buscarAvaliacaoUsuarioUseCase: BuscarAvaliacaoUsuarioUseCase(
+          avaliacaoRepo,
+        ),
         verificarAutoavaliacaoUseCase: const VerificarAutoavaliacaoUseCase(),
       );
       viewModel = AvaliacaoViewModel(avaliacaoFacade);
@@ -400,11 +416,14 @@ void main() {
       expect(viewModel.avaliacaoExistente.value, isNull);
     });
 
-    test('definirNota deve atualizar o mapa de notas e a pontuação total reativa', () {
-      viewModel.definirNota(CriterioAvaliacao.aura, 5);
-      expect(viewModel.notas.value[CriterioAvaliacao.aura.id], 5);
-      expect(viewModel.pontuacaoTotal.value, 47); // 45 - 3 + 5 = 47
-    });
+    test(
+      'definirNota deve atualizar o mapa de notas e a pontuação total reativa',
+      () {
+        viewModel.definirNota(CriterioAvaliacao.aura, 5);
+        expect(viewModel.notas.value[CriterioAvaliacao.aura.id], 5);
+        expect(viewModel.pontuacaoTotal.value, 47); // 45 - 3 + 5 = 47
+      },
+    );
 
     test('salvarAvaliacaoCommand deve bloquear autoavaliação', () async {
       // Quando usuário avaliador é o mesmo que criou o perfil
@@ -415,28 +434,37 @@ void main() {
       );
 
       expect(res.isFailure, isTrue);
-      expect(viewModel.errorMessage.value, contains('Não é permitido avaliar a si mesmo'));
+      expect(
+        viewModel.errorMessage.value,
+        contains('Não é permitido avaliar a si mesmo'),
+      );
     });
 
-    test('salvarAvaliacaoCommand deve salvar com sucesso para outro usuário', () async {
-      final res = await viewModel.salvarAvaliacaoCommand(
-        'pessoa_1',
-        'usuario_avaliador',
-        'outro_autor',
-      );
+    test(
+      'salvarAvaliacaoCommand deve salvar com sucesso para outro usuário',
+      () async {
+        final res = await viewModel.salvarAvaliacaoCommand(
+          'pessoa_1',
+          'usuario_avaliador',
+          'outro_autor',
+        );
 
-      expect(res.isSuccess, isTrue);
-      expect(viewModel.avaliacaoExistente.value, isNotNull);
-      expect(viewModel.errorMessage.value, isNull);
+        expect(res.isSuccess, isTrue);
+        expect(viewModel.avaliacaoExistente.value, isNotNull);
+        expect(viewModel.errorMessage.value, isNull);
 
-      // Carregar avaliação salva
-      final carregarRes = await viewModel.carregarAvaliacaoCommand(
-        'pessoa_1',
-        'usuario_avaliador',
-      );
-      expect(carregarRes.isSuccess, isTrue);
-      expect(viewModel.avaliacaoExistente.value?.avaliadorUid, 'usuario_avaliador');
-    });
+        // Carregar avaliação salva
+        final carregarRes = await viewModel.carregarAvaliacaoCommand(
+          'pessoa_1',
+          'usuario_avaliador',
+        );
+        expect(carregarRes.isSuccess, isTrue);
+        expect(
+          viewModel.avaliacaoExistente.value?.avaliadorUid,
+          'usuario_avaliador',
+        );
+      },
+    );
   });
 
   group('RankingViewModel Tests', () {
@@ -474,32 +502,36 @@ void main() {
 
       // Avaliação para pA com nota 60
       final notasA = {for (final c in CriterioAvaliacao.values) c.id: 4};
-      await avaliacaoRepo.salvarAvaliacao(AvaliacaoModel(
-        id: 'u1_pA',
-        avaliadorUid: 'u1',
-        pessoaId: 'pA',
-        notas: notasA,
-        pontuacaoTotal: 60,
-        dataAvaliacao: DateTime.now(),
-      ));
+      await avaliacaoRepo.salvarAvaliacao(
+        AvaliacaoModel(
+          id: 'u1_pA',
+          avaliadorUid: 'u1',
+          pessoaId: 'pA',
+          notas: notasA,
+          pontuacaoTotal: 60,
+          dataAvaliacao: DateTime.now(),
+        ),
+      );
 
       // Avaliação para pB com nota 75
       final notasB = {for (final c in CriterioAvaliacao.values) c.id: 5};
-      await avaliacaoRepo.salvarAvaliacao(AvaliacaoModel(
-        id: 'u1_pB',
-        avaliadorUid: 'u1',
-        pessoaId: 'pB',
-        notas: notasB,
-        pontuacaoTotal: 75,
-        dataAvaliacao: DateTime.now(),
-      ));
+      await avaliacaoRepo.salvarAvaliacao(
+        AvaliacaoModel(
+          id: 'u1_pB',
+          avaliadorUid: 'u1',
+          pessoaId: 'pB',
+          notas: notasB,
+          pontuacaoTotal: 75,
+          dataAvaliacao: DateTime.now(),
+        ),
+      );
 
       final rankingRepo = RankingRepositoryImpl(pessoaRepo, avaliacaoRepo);
       rankingFacade = RankingFacade(
-        calcularRankingPessoalUseCase:
-            CalcularRankingPessoalUseCase(rankingRepo),
-        calcularRankingGlobalUseCase:
-            CalcularRankingGlobalUseCase(rankingRepo),
+        calcularRankingPessoalUseCase: CalcularRankingPessoalUseCase(
+          rankingRepo,
+        ),
+        calcularRankingGlobalUseCase: CalcularRankingGlobalUseCase(rankingRepo),
       );
 
       viewModel = RankingViewModel(rankingFacade);
@@ -562,20 +594,23 @@ void main() {
   });
 
   group('ServiceLocator Tests', () {
-    test('setupDependencies deve registrar e resolver todas as camadas sem erro', () {
-      setupDependencies();
+    test(
+      'setupDependencies deve registrar e resolver todas as camadas sem erro',
+      () {
+        setupDependencies();
 
-      expect(sl.isRegistered<AuthFacade>(), isTrue);
-      expect(sl.isRegistered<PessoaFacade>(), isTrue);
-      expect(sl.isRegistered<AvaliacaoFacade>(), isTrue);
-      expect(sl.isRegistered<RankingFacade>(), isTrue);
-      expect(sl.isRegistered<TemaFacade>(), isTrue);
+        expect(sl.isRegistered<AuthFacade>(), isTrue);
+        expect(sl.isRegistered<PessoaFacade>(), isTrue);
+        expect(sl.isRegistered<AvaliacaoFacade>(), isTrue);
+        expect(sl.isRegistered<RankingFacade>(), isTrue);
+        expect(sl.isRegistered<TemaFacade>(), isTrue);
 
-      expect(sl.isRegistered<AuthViewModel>(), isTrue);
-      expect(sl.isRegistered<PessoaViewModel>(), isTrue);
-      expect(sl.isRegistered<AvaliacaoViewModel>(), isTrue);
-      expect(sl.isRegistered<RankingViewModel>(), isTrue);
-      expect(sl.isRegistered<ThemeViewModel>(), isTrue);
-    });
+        expect(sl.isRegistered<AuthViewModel>(), isTrue);
+        expect(sl.isRegistered<PessoaViewModel>(), isTrue);
+        expect(sl.isRegistered<AvaliacaoViewModel>(), isTrue);
+        expect(sl.isRegistered<RankingViewModel>(), isTrue);
+        expect(sl.isRegistered<ThemeViewModel>(), isTrue);
+      },
+    );
   });
 }

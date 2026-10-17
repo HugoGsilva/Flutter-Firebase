@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../result/result.dart';
 
 abstract class Command<T> extends ChangeNotifier {

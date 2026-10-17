@@ -58,7 +58,8 @@ class AvaliacaoModel {
       }
     }
 
-    final pontuacao = (map['pontuacaoTotal'] as num?)?.toInt() ??
+    final pontuacao =
+        (map['pontuacaoTotal'] as num?)?.toInt() ??
         CriterioAvaliacao.calcularPontuacaoTotal(parsedNotas);
 
     return AvaliacaoModel(

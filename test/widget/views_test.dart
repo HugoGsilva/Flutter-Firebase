@@ -268,7 +268,9 @@ void _setupTestLocator() {
   sl.registerSingleton<AuthViewModel>(AuthViewModel(authFacade));
   sl.registerSingleton<PessoaViewModel>(PessoaViewModel(pessoaFacade));
   sl.registerSingleton<AvaliacaoViewModel>(AvaliacaoViewModel(avaliacaoFacade));
-  sl.registerSingleton<RankingViewModel>(RankingViewModel(rankingFacade, authFacade: authFacade));
+  sl.registerSingleton<RankingViewModel>(
+    RankingViewModel(rankingFacade, authFacade: authFacade),
+  );
   sl.registerSingleton<ThemeViewModel>(ThemeViewModel(temaFacade));
   sl.registerSingleton<HomeViewModel>(HomeViewModel());
 }
@@ -279,20 +281,23 @@ void main() {
   });
 
   group('Presentation Views Tests', () {
-    testWidgets('SplashScreen exibe título, subtítulo e identificação IFPR', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: SplashScreen()),
-      );
+    testWidgets('SplashScreen exibe título, subtítulo e identificação IFPR', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: SplashScreen()));
 
       expect(find.text('PiramidGame IFPR-Pgua'), findsOneWidget);
       expect(find.text('IFPR - Campus Paranaguá'), findsOneWidget);
-      expect(find.text('Ranking de Popularidade e Nível Lenda no Campus'), findsOneWidget);
+      expect(
+        find.text('Ranking de Popularidade e Nível Lenda no Campus'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('LoginScreen renderiza campos de e-mail, senha e botões', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: LoginScreen()),
-      );
+    testWidgets('LoginScreen renderiza campos de e-mail, senha e botões', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: LoginScreen()));
 
       expect(find.text('PiramidGame IFPR-Pgua'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(2));
@@ -301,10 +306,10 @@ void main() {
       expect(find.text('Criar conta'), findsOneWidget);
     });
 
-    testWidgets('RegisterScreen renderiza campos e validação de senhas', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: RegisterScreen()),
-      );
+    testWidgets('RegisterScreen renderiza campos e validação de senhas', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: RegisterScreen()));
 
       expect(find.text('Criar Nova Conta'), findsOneWidget);
       expect(find.byType(TextFormField), findsNWidgets(4));
@@ -316,10 +321,10 @@ void main() {
       expect(find.text('Informe seu nome'), findsOneWidget);
     });
 
-    testWidgets('HomeScreen exibe AppBar e todas as 4 abas de navegação', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: HomeScreen()),
-      );
+    testWidgets('HomeScreen exibe AppBar e todas as 4 abas de navegação', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: HomeScreen()));
 
       expect(find.text('Piramid Game'), findsOneWidget);
       expect(find.text('Pessoas'), findsOneWidget);
@@ -328,25 +333,28 @@ void main() {
       expect(find.text('Sobre o App'), findsOneWidget);
     });
 
-    testWidgets('SobreView exibe o texto oficial sugerido da página 20 e os 15 critérios', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: SobreView()),
-      );
+    testWidgets(
+      'SobreView exibe o texto oficial sugerido da página 20 e os 15 critérios',
+      (tester) async {
+        await tester.pumpWidget(const MaterialApp(home: SobreView()));
 
-      expect(find.text('PiramidGame IFPR-Pgua'), findsOneWidget);
-      expect(find.text('IFPR – Campus Paranaguá'), findsOneWidget);
-      expect(
-        find.textContaining(
-          'O PiramidGame IFPR-Pgua é um aplicativo desenvolvido em Flutter para fins didáticos',
-        ),
-        findsOneWidget,
-      );
-      expect(find.text('Cálculo do Nível Lenda'), findsOneWidget);
-      expect(find.text('Rankings Pessoal e Global'), findsOneWidget);
-      expect(find.text('Os 15 Critérios de Avaliação'), findsOneWidget);
-    });
+        expect(find.text('PiramidGame IFPR-Pgua'), findsOneWidget);
+        expect(find.text('IFPR – Campus Paranaguá'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'O PiramidGame IFPR-Pgua é um aplicativo desenvolvido em Flutter para fins didáticos',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Cálculo do Nível Lenda'), findsOneWidget);
+        expect(find.text('Rankings Pessoal e Global'), findsOneWidget);
+        expect(find.text('Os 15 Critérios de Avaliação'), findsOneWidget);
+      },
+    );
 
-    testWidgets('StarRating renderiza estrelas e reage ao toque', (tester) async {
+    testWidgets('StarRating renderiza estrelas e reage ao toque', (
+      tester,
+    ) async {
       int notaEscolhida = 0;
 
       await tester.pumpWidget(
@@ -371,7 +379,9 @@ void main() {
       expect(notaEscolhida, equals(5));
     });
 
-    testWidgets('AvaliacaoScreen exibe critérios e Nível Lenda dinâmico', (tester) async {
+    testWidgets('AvaliacaoScreen exibe critérios e Nível Lenda dinâmico', (
+      tester,
+    ) async {
       final pessoa = PessoaModel(
         id: 'p1',
         nome: 'Ioshi IFPR',
@@ -396,36 +406,41 @@ void main() {
       expect(find.text('Salvar Avaliação'), findsOneWidget);
     });
 
-    testWidgets('AvaliacaoScreen bloqueia autoavaliação quando usuário tenta avaliar seu próprio cadastro', (tester) async {
-      final pessoaPropria = PessoaModel(
-        id: 'p2',
-        nome: 'Mounir Veterano',
-        apelido: 'Mounir',
-        curso: 'TADS',
-        turma: 2024,
-        dataNascimento: DateTime(2003, 3, 10),
-        criadoPor: 'uid_1',
-      );
+    testWidgets(
+      'AvaliacaoScreen bloqueia autoavaliação quando usuário tenta avaliar seu próprio cadastro',
+      (tester) async {
+        final pessoaPropria = PessoaModel(
+          id: 'p2',
+          nome: 'Mounir Veterano',
+          apelido: 'Mounir',
+          curso: 'TADS',
+          turma: 2024,
+          dataNascimento: DateTime(2003, 3, 10),
+          criadoPor: 'uid_1',
+        );
 
-      await tester.pumpWidget(
-        MaterialApp(
-          home: AvaliacaoScreen(pessoaId: 'p2', pessoa: pessoaPropria),
-        ),
-      );
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(
+          MaterialApp(
+            home: AvaliacaoScreen(pessoaId: 'p2', pessoa: pessoaPropria),
+          ),
+        );
+        await tester.pumpAndSettle();
 
-      expect(find.text('Autoavaliação Bloqueada'), findsOneWidget);
-      expect(
-        find.textContaining('Pelas regras do PiramidGame, um usuário não pode avaliar o próprio perfil'),
-        findsOneWidget,
-      );
-      expect(find.text('Salvar Avaliação'), findsNothing);
-    });
+        expect(find.text('Autoavaliação Bloqueada'), findsOneWidget);
+        expect(
+          find.textContaining(
+            'Pelas regras do PiramidGame, um usuário não pode avaliar o próprio perfil',
+          ),
+          findsOneWidget,
+        );
+        expect(find.text('Salvar Avaliação'), findsNothing);
+      },
+    );
 
-    testWidgets('PessoaFormScreen valida formulário e salva cadastro', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: PessoaFormScreen()),
-      );
+    testWidgets('PessoaFormScreen valida formulário e salva cadastro', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: PessoaFormScreen()));
 
       expect(find.text('Cadastrar Pessoa'), findsOneWidget);
       expect(find.text('Salvar Cadastro'), findsOneWidget);
@@ -437,13 +452,16 @@ void main() {
       await tester.pumpAndSettle();
 
       final pessoaVm = sl<PessoaViewModel>();
-      expect(pessoaVm.pessoas.value.any((p) => p.nome == 'Luizinho IFPR'), isTrue);
+      expect(
+        pessoaVm.pessoas.value.any((p) => p.nome == 'Luizinho IFPR'),
+        isTrue,
+      );
     });
 
-    testWidgets('PessoasListView permite busca e exibe pessoas da lista', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: PessoasListView()),
-      );
+    testWidgets('PessoasListView permite busca e exibe pessoas da lista', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: PessoasListView()));
       await tester.pumpAndSettle();
 
       expect(find.text('Ioshi IFPR'), findsOneWidget);
@@ -457,7 +475,9 @@ void main() {
       expect(find.text('Mounir Veterano'), findsNothing);
     });
 
-    testWidgets('PessoaDetailScreen exibe informações e diálogo de exclusão', (tester) async {
+    testWidgets('PessoaDetailScreen exibe informações e diálogo de exclusão', (
+      tester,
+    ) async {
       final pessoa = PessoaModel(
         id: 'p1',
         nome: 'Ioshi IFPR',
@@ -469,7 +489,9 @@ void main() {
       );
 
       await tester.pumpWidget(
-        MaterialApp(home: PessoaDetailScreen(pessoaId: 'p1', pessoa: pessoa)),
+        MaterialApp(
+          home: PessoaDetailScreen(pessoaId: 'p1', pessoa: pessoa),
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -485,24 +507,32 @@ void main() {
       expect(find.text('Cancelar'), findsOneWidget);
     });
 
-    testWidgets('RankingPessoalView exibe título e pergunta norteadora', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: RankingPessoalView()),
-      );
+    testWidgets('RankingPessoalView exibe título e pergunta norteadora', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: RankingPessoalView()));
       await tester.pumpAndSettle();
 
       expect(find.text('Ranking Pessoal'), findsOneWidget);
-      expect(find.text('“Na minha opinião, quem possui o maior Nível Lenda?”'), findsOneWidget);
+      expect(
+        find.text('“Na minha opinião, quem possui o maior Nível Lenda?”'),
+        findsOneWidget,
+      );
     });
 
-    testWidgets('RankingGlobalView exibe título e pergunta norteadora', (tester) async {
-      await tester.pumpWidget(
-        const MaterialApp(home: RankingGlobalView()),
-      );
+    testWidgets('RankingGlobalView exibe título e pergunta norteadora', (
+      tester,
+    ) async {
+      await tester.pumpWidget(const MaterialApp(home: RankingGlobalView()));
       await tester.pumpAndSettle();
 
       expect(find.text('Ranking Global'), findsOneWidget);
-      expect(find.text('“Na opinião dos usuários do aplicativo, quem possui o maior Nível Lenda?”'), findsOneWidget);
+      expect(
+        find.text(
+          '“Na opinião dos usuários do aplicativo, quem possui o maior Nível Lenda?”',
+        ),
+        findsOneWidget,
+      );
     });
   });
 }

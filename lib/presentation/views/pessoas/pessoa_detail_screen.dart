@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
 import '../../../domain/models/pessoa_model.dart';
@@ -9,11 +10,7 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/pessoa_viewmodel.dart';
 
 class PessoaDetailScreen extends StatefulWidget {
-  const PessoaDetailScreen({
-    super.key,
-    required this.pessoaId,
-    this.pessoa,
-  });
+  const PessoaDetailScreen({super.key, required this.pessoaId, this.pessoa});
 
   final String pessoaId;
   final PessoaModel? pessoa;
@@ -43,7 +40,10 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
     }
   }
 
-  Future<void> _confirmarExclusao(BuildContext context, PessoaModel pessoa) async {
+  Future<void> _confirmarExclusao(
+    BuildContext context,
+    PessoaModel pessoa,
+  ) async {
     final confirmar = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
@@ -86,7 +86,8 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
         Navigator.of(context).maybePop();
       }
     } else if (result case Failure()) {
-      final msg = _pessoaViewModel.errorMessage.value ?? 'Erro ao excluir pessoa.';
+      final msg =
+          _pessoaViewModel.errorMessage.value ?? 'Erro ao excluir pessoa.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -106,7 +107,9 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
     return SignalBuilder(
       builder: (context) {
         final listaAtual = _pessoaViewModel.pessoas.value;
-        final pessoa = listaAtual.where((p) => p.id == widget.pessoaId).firstOrNull ?? _pessoa;
+        final pessoa =
+            listaAtual.where((p) => p.id == widget.pessoaId).firstOrNull ??
+            _pessoa;
 
         if (pessoa == null) {
           return Scaffold(
@@ -115,7 +118,11 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  const Icon(Icons.person_off_outlined, size: 64, color: Colors.grey),
+                  const Icon(
+                    Icons.person_off_outlined,
+                    size: 64,
+                    color: Colors.grey,
+                  ),
                   const SizedBox(height: 16),
                   const Text('Pessoa não encontrada.'),
                   const SizedBox(height: 16),
@@ -130,20 +137,22 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
         }
 
         final currentUserId = _authViewModel.currentUser.value?.uid ?? '';
-        final isAutoavaliacao = currentUserId == pessoa.criadoPor || currentUserId == pessoa.id;
-        final dataFormatada = DateFormat('dd/MM/yyyy').format(pessoa.dataNascimento);
+        final isAutoavaliacao =
+            currentUserId == pessoa.criadoPor || currentUserId == pessoa.id;
+        final dataFormatada = DateFormat('dd/MM/yyyy')
+            .format(pessoa.dataNascimento);
 
         return Scaffold(
           appBar: AppBar(
-            title: Text(pessoa.apelido.isNotEmpty ? pessoa.apelido : pessoa.nome),
+            title: Text(
+              pessoa.apelido.isNotEmpty ? pessoa.apelido : pessoa.nome,
+            ),
             actions: [
               IconButton(
                 icon: const Icon(Icons.edit_outlined),
                 tooltip: 'Editar',
-                onPressed: () => context.push(
-                  '/pessoas/editar/${pessoa.id}',
-                  extra: pessoa,
-                ),
+                onPressed: () =>
+                    context.push('/pessoas/editar/${pessoa.id}', extra: pessoa),
               ),
               IconButton(
                 icon: Icon(Icons.delete_outline, color: colorScheme.error),
@@ -164,7 +173,9 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
                         radius: 46,
                         backgroundColor: colorScheme.primaryContainer,
                         child: Text(
-                          pessoa.nome.isNotEmpty ? pessoa.nome[0].toUpperCase() : '?',
+                          pessoa.nome.isNotEmpty
+                              ? pessoa.nome[0].toUpperCase()
+                              : '?',
                           style: theme.textTheme.headlineMedium?.copyWith(
                             color: colorScheme.onPrimaryContainer,
                             fontWeight: FontWeight.bold,
@@ -203,7 +214,10 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
                     ),
                   ),
                   child: Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
                     child: Column(
                       children: [
                         _buildInfoTile(
@@ -242,7 +256,9 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
                   Container(
                     padding: const EdgeInsets.all(14),
                     decoration: BoxDecoration(
-                      color: colorScheme.secondaryContainer.withValues(alpha: 0.5),
+                      color: colorScheme.secondaryContainer.withValues(
+                        alpha: 0.5,
+                      ),
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
@@ -273,10 +289,7 @@ class _PessoaDetailScreenState extends State<PessoaDetailScreen> {
                   icon: const Icon(Icons.star_rounded, size: 24),
                   label: const Text(
                     'Avaliar Pessoa',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                 ),
                 const SizedBox(height: 12),

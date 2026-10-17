@@ -5,14 +5,14 @@ sealed class Result<T> {
   bool get isFailure => this is Failure<T>;
 
   T? get dataOrNull => switch (this) {
-        Success(data: final d) => d,
-        Failure() => null,
-      };
+    Success(data: final d) => d,
+    Failure() => null,
+  };
 
   Exception? get errorOrNull => switch (this) {
-        Success() => null,
-        Failure(error: final e) => e,
-      };
+    Success() => null,
+    Failure(error: final e) => e,
+  };
 }
 
 class Success<T> extends Result<T> {

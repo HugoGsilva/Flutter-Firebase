@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../core/command/command.dart';
 import '../../core/result/result.dart';
 import '../../domain/facades/auth_facade.dart';
@@ -7,10 +8,7 @@ import '../../domain/facades/ranking_facade.dart';
 import '../../domain/models/ranking_item_model.dart';
 
 class RankingViewModel extends ChangeNotifier {
-  RankingViewModel(
-    this._rankingFacade, {
-    this.authFacade,
-  }) {
+  RankingViewModel(this._rankingFacade, {this.authFacade}) {
     rankingPessoal = signal<List<RankingItemModel>>([]);
     rankingGlobal = signal<List<RankingItemModel>>([]);
     isLoading = signal<bool>(false);
@@ -18,10 +16,11 @@ class RankingViewModel extends ChangeNotifier {
 
     carregarRankingPessoalCommand =
         CommandOptional1<List<RankingItemModel>, String>(
-      _carregarRankingPessoal,
+          _carregarRankingPessoal,
+        );
+    carregarRankingGlobalCommand = Command0<List<RankingItemModel>>(
+      _carregarRankingGlobal,
     );
-    carregarRankingGlobalCommand =
-        Command0<List<RankingItemModel>>(_carregarRankingGlobal);
   }
 
   final RankingFacade _rankingFacade;
@@ -34,7 +33,7 @@ class RankingViewModel extends ChangeNotifier {
   late final Signal<String?> errorMessage;
 
   late final CommandOptional1<List<RankingItemModel>, String>
-      carregarRankingPessoalCommand;
+  carregarRankingPessoalCommand;
   late final Command0<List<RankingItemModel>> carregarRankingGlobalCommand;
 
   void setUsuarioUid(String? uid) {
@@ -44,13 +43,16 @@ class RankingViewModel extends ChangeNotifier {
   Future<Result<List<RankingItemModel>>> _carregarRankingPessoal([
     String? avaliadorUid,
   ]) async {
-    final uid = avaliadorUid ??
+    final uid =
+        avaliadorUid ??
         _usuarioUidOverride ??
         authFacade?.verificarAutenticado().dataOrNull?.uid;
 
     if (uid == null || uid.isEmpty) {
       const falha = Failure<List<RankingItemModel>>(
-        FormatException('Identificador do usuário não encontrado para o ranking pessoal.'),
+        FormatException(
+          'Identificador do usuário não encontrado para o ranking pessoal.',
+        ),
       );
       errorMessage.value = 'Identificador do usuário não encontrado.';
       return falha;

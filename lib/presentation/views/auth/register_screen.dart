@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
 import '../../viewmodels/auth_viewmodel.dart';
@@ -70,7 +71,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       context.go('/home');
     } else if (result case Failure()) {
-      final msg = _authViewModel.errorMessage.value ?? 'Erro ao cadastrar usuário.';
+      final msg =
+          _authViewModel.errorMessage.value ?? 'Erro ao cadastrar usuário.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(msg),
@@ -88,9 +90,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final colorScheme = theme.colorScheme;
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Criar Nova Conta'),
-      ),
+      appBar: AppBar(title: const Text('Criar Nova Conta')),
       body: SafeArea(
         child: Center(
           child: SingleChildScrollView(

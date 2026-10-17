@@ -13,7 +13,9 @@ class BuscarAvaliacaoUsuarioUseCase {
   }) async {
     if (avaliadorUid.trim().isEmpty || pessoaId.trim().isEmpty) {
       return const Failure(
-        FormatException('Identificadores do avaliador e da pessoa são obrigatórios.'),
+        FormatException(
+          'Identificadores do avaliador e da pessoa são obrigatórios.',
+        ),
       );
     }
 

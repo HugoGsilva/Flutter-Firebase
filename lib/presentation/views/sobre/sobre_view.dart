@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+
 import '../../../domain/models/criterios_avaliacao.dart';
 
 class SobreView extends StatelessWidget {
@@ -72,7 +73,10 @@ class SobreView extends StatelessWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.format_quote_rounded, color: colorScheme.primary),
+                        Icon(
+                          Icons.format_quote_rounded,
+                          color: colorScheme.primary,
+                        ),
                         const SizedBox(width: 8),
                         Text(
                           'Apresentação Oficial',
@@ -90,9 +94,7 @@ class SobreView extends StatelessWidget {
                       'Cada usuário possui um ranking pessoal, baseado exclusivamente nas avaliações que realizou. O aplicativo também possui um ranking global, calculado a partir das avaliações realizadas pelos diferentes usuários.\n\n'
                       'Os dados são armazenados remotamente no Firestore e o acesso ao aplicativo utiliza Firebase Authentication.\n\n'
                       'O aplicativo também permite alternar entre tema claro e tema escuro.',
-                      style: theme.textTheme.bodyMedium?.copyWith(
-                        height: 1.5,
-                      ),
+                      style: theme.textTheme.bodyMedium?.copyWith(height: 1.5),
                     ),
                   ],
                 ),
@@ -144,7 +146,10 @@ class SobreView extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                leading: Icon(Icons.checklist_rounded, color: colorScheme.primary),
+                leading: Icon(
+                  Icons.checklist_rounded,
+                  color: colorScheme.primary,
+                ),
                 children: CriterioAvaliacao.values.map((c) {
                   return ListTile(
                     dense: true,

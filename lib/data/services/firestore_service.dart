@@ -1,11 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 import '../../domain/models/avaliacao_model.dart';
 import '../../domain/models/pessoa_model.dart';
 import '../../domain/models/usuario_model.dart';
 
 class FirestoreService {
   FirestoreService({FirebaseFirestore? firestore})
-      : _firestore = firestore ?? FirebaseFirestore.instance;
+    : _firestore = firestore ?? FirebaseFirestore.instance;
 
   final FirebaseFirestore _firestore;
 
@@ -70,9 +71,7 @@ class FirestoreService {
 
   Future<List<PessoaModel>> listarPessoas() async {
     final snapshot = await _firestore.collection(colecaoPessoas).get();
-    return snapshot.docs
-        .map((doc) => PessoaModel.fromMap(doc.data()))
-        .toList();
+    return snapshot.docs.map((doc) => PessoaModel.fromMap(doc.data())).toList();
   }
 
   // --- Avaliações ---
@@ -84,10 +83,7 @@ class FirestoreService {
     );
     final dados = avaliacao.copyWith(id: idCanonico).toMap();
 
-    await _firestore
-        .collection(colecaoAvaliacoes)
-        .doc(idCanonico)
-        .set(dados);
+    await _firestore.collection(colecaoAvaliacoes).doc(idCanonico).set(dados);
   }
 
   Future<AvaliacaoModel?> obterAvaliacao(
@@ -95,8 +91,10 @@ class FirestoreService {
     String pessoaId,
   ) async {
     final idCanonico = AvaliacaoModel.gerarIdCanonico(avaliadorUid, pessoaId);
-    final doc =
-        await _firestore.collection(colecaoAvaliacoes).doc(idCanonico).get();
+    final doc = await _firestore
+        .collection(colecaoAvaliacoes)
+        .doc(idCanonico)
+        .get();
 
     if (!doc.exists || doc.data() == null) {
       return null;

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/home_viewmodel.dart';
@@ -99,10 +100,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
         ],
       ),
-      body: IndexedStack(
-        index: selectedIndex,
-        children: _views,
-      ),
+      body: IndexedStack(index: selectedIndex, children: _views),
       bottomNavigationBar: NavigationBar(
         selectedIndex: selectedIndex,
         onDestinationSelected: (index) {

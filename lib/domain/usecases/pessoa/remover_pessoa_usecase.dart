@@ -8,9 +8,7 @@ class RemoverPessoaUseCase {
 
   Future<Result<void>> call(String id, {required bool confirmado}) async {
     if (!confirmado) {
-      return Failure(
-        Exception('A exclusão deve ser confirmada pelo usuário.'),
-      );
+      return Failure(Exception('A exclusão deve ser confirmada pelo usuário.'));
     }
 
     if (id.trim().isEmpty) {

@@ -1,13 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
+
 import '../../domain/models/usuario_model.dart';
 
 class AuthService {
-  AuthService({
-    FirebaseAuth? firebaseAuth,
-    GoogleSignIn? googleSignIn,
-  })  : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-        _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+  AuthService({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
+    : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
+      _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
 
   final FirebaseAuth _firebaseAuth;
   final GoogleSignIn _googleSignIn;
@@ -19,8 +18,8 @@ class AuthService {
 
   Stream<UsuarioModel?> get authStateChanges {
     return _firebaseAuth.authStateChanges().map(
-          (user) => user != null ? _mapFirebaseUser(user) : null,
-        );
+      (user) => user != null ? _mapFirebaseUser(user) : null,
+    );
   }
 
   Future<UsuarioModel?> cadastrarEmailSenha({
@@ -37,7 +36,10 @@ class AuthService {
       if (nome.isNotEmpty) {
         await user.updateDisplayName(nome);
       }
-      return _mapFirebaseUser(user, overrideNome: nome.isNotEmpty ? nome : null);
+      return _mapFirebaseUser(
+        user,
+        overrideNome: nome.isNotEmpty ? nome : null,
+      );
     }
     return null;
   }
@@ -57,11 +59,8 @@ class AuthService {
   Future<UsuarioModel?> loginGoogle() async {
     final googleUser = await _googleSignIn.authenticate();
     final googleAuth = googleUser.authentication;
-    final clientAuth =
-        await googleUser.authorizationClient.authorizationForScopes([
-      'email',
-      'profile',
-    ]);
+    final clientAuth = await googleUser.authorizationClient
+        .authorizationForScopes(['email', 'profile']);
     final credential = GoogleAuthProvider.credential(
       accessToken: clientAuth?.accessToken,
       idToken: googleAuth.idToken,
@@ -72,10 +71,7 @@ class AuthService {
   }
 
   Future<void> logout() async {
-    await Future.wait([
-      _firebaseAuth.signOut(),
-      _googleSignIn.signOut(),
-    ]);
+    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.signOut()]);
   }
 
   UsuarioModel _mapFirebaseUser(User user, {String? overrideNome}) {

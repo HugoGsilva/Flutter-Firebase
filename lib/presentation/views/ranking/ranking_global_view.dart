@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../domain/models/ranking_item_model.dart';
 import '../../viewmodels/ranking_viewmodel.dart';
@@ -123,9 +124,8 @@ class _RankingGlobalViewState extends State<RankingGlobalView> {
                                   const SizedBox(height: 16),
                                   Text(
                                     'Nenhuma avaliação global registrada',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                     textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(height: 8),
@@ -192,7 +192,9 @@ class _RankingGlobalViewState extends State<RankingGlobalView> {
       badgeTextColor = colorScheme.onSurfaceVariant;
     }
 
-    final mediaStr = item.mediaPontuacao.toStringAsFixed(1).replaceAll('.', ',');
+    final mediaStr = item.mediaPontuacao
+        .toStringAsFixed(1)
+        .replaceAll('.', ',');
     final avaliacoesStr = item.totalAvaliacoes == 1
         ? '1 avaliação'
         : '${item.totalAvaliacoes} avaliações';
@@ -299,7 +301,9 @@ class _RankingGlobalViewState extends State<RankingGlobalView> {
                     Text(
                       avaliacoesStr,
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onSecondaryContainer.withValues(alpha: 0.8),
+                        color: colorScheme.onSecondaryContainer.withValues(
+                          alpha: 0.8,
+                        ),
                         fontSize: 10,
                       ),
                     ),

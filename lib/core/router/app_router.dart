@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+
 import '../../domain/models/pessoa_model.dart';
 import '../../presentation/viewmodels/auth_viewmodel.dart';
 import '../../presentation/views/auth/login_screen.dart';
@@ -49,26 +50,14 @@ final appRouter = GoRouter(
     return null;
   },
   routes: [
-    GoRoute(
-      path: '/',
-      redirect: (context, state) => '/splash',
-    ),
-    GoRoute(
-      path: '/splash',
-      builder: (context, state) => const SplashScreen(),
-    ),
-    GoRoute(
-      path: '/login',
-      builder: (context, state) => const LoginScreen(),
-    ),
+    GoRoute(path: '/', redirect: (context, state) => '/splash'),
+    GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
+    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
     GoRoute(
       path: '/register',
       builder: (context, state) => const RegisterScreen(),
     ),
-    GoRoute(
-      path: '/home',
-      builder: (context, state) => const HomeScreen(),
-    ),
+    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
     GoRoute(
       path: '/pessoas/novo',
       builder: (context, state) => const PessoaFormScreen(),

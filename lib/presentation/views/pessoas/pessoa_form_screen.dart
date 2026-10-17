@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
 import '../../../domain/models/pessoa_model.dart';
@@ -9,10 +10,7 @@ import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/pessoa_viewmodel.dart';
 
 class PessoaFormScreen extends StatefulWidget {
-  const PessoaFormScreen({
-    super.key,
-    this.pessoaParaEditar,
-  });
+  const PessoaFormScreen({super.key, this.pessoaParaEditar});
 
   final PessoaModel? pessoaParaEditar;
 
@@ -54,8 +52,8 @@ class _PessoaFormScreenState extends State<PessoaFormScreen> {
       _cursoSelecionado = p.curso.toUpperCase();
       _turmaSelecionada = p.turma;
       _dataNascimentoSelecionada = p.dataNascimento;
-      _dataNascimentoController.text =
-          DateFormat('dd/MM/yyyy').format(p.dataNascimento);
+      _dataNascimentoController.text = DateFormat('dd/MM/yyyy')
+          .format(p.dataNascimento);
     } else {
       _cursoSelecionado = _cursos.first;
       _turmaSelecionada = DateTime.now().year.clamp(
@@ -63,8 +61,8 @@ class _PessoaFormScreenState extends State<PessoaFormScreen> {
         PessoaModel.turmaAnoMaximo,
       );
       _dataNascimentoSelecionada = DateTime(2005, 1, 1);
-      _dataNascimentoController.text =
-          DateFormat('dd/MM/yyyy').format(_dataNascimentoSelecionada!);
+      _dataNascimentoController.text = DateFormat('dd/MM/yyyy')
+          .format(_dataNascimentoSelecionada!);
     }
   }
 
@@ -91,8 +89,8 @@ class _PessoaFormScreenState extends State<PessoaFormScreen> {
     if (picked != null) {
       setState(() {
         _dataNascimentoSelecionada = picked;
-        _dataNascimentoController.text =
-            DateFormat('dd/MM/yyyy').format(picked);
+        _dataNascimentoController.text = DateFormat('dd/MM/yyyy')
+            .format(picked);
       });
     }
   }
@@ -153,7 +151,8 @@ class _PessoaFormScreenState extends State<PessoaFormScreen> {
         Navigator.of(context).maybePop();
       }
     } else if (result case Failure()) {
-      final msg = _pessoaViewModel.errorMessage.value ??
+      final msg =
+          _pessoaViewModel.errorMessage.value ??
           'Erro ao salvar cadastro da pessoa.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

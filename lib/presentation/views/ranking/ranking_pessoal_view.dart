@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../domain/models/ranking_item_model.dart';
 import '../../viewmodels/ranking_viewmodel.dart';
@@ -123,9 +124,8 @@ class _RankingPessoalViewState extends State<RankingPessoalView> {
                                   const SizedBox(height: 16),
                                   Text(
                                     'Nenhuma avaliação pessoal ainda',
-                                    style: theme.textTheme.titleMedium?.copyWith(
-                                      fontWeight: FontWeight.bold,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(fontWeight: FontWeight.bold),
                                     textAlign: TextAlign.center,
                                   ),
                                   const SizedBox(height: 8),

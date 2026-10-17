@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../domain/models/pessoa_model.dart';
 import '../../viewmodels/pessoa_viewmodel.dart';
@@ -69,7 +70,9 @@ class _PessoasListViewState extends State<PessoasListView> {
                       )
                     : null,
                 filled: true,
-                fillColor: colorScheme.surfaceContainerHighest.withValues(alpha: 0.5),
+                fillColor: colorScheme.surfaceContainerHighest.withValues(
+                  alpha: 0.5,
+                ),
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(16),
                   borderSide: BorderSide.none,
@@ -210,10 +213,8 @@ class _PessoasListViewState extends State<PessoasListView> {
       ),
       child: InkWell(
         borderRadius: BorderRadius.circular(16),
-        onTap: () => context.push(
-          '/pessoas/detalhes/${pessoa.id}',
-          extra: pessoa,
-        ),
+        onTap: () =>
+            context.push('/pessoas/detalhes/${pessoa.id}', extra: pessoa),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(

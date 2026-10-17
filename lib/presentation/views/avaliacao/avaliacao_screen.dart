@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
 import '../../../domain/models/criterios_avaliacao.dart';
@@ -11,11 +12,7 @@ import '../../viewmodels/pessoa_viewmodel.dart';
 import 'widgets/star_rating.dart';
 
 class AvaliacaoScreen extends StatefulWidget {
-  const AvaliacaoScreen({
-    super.key,
-    required this.pessoaId,
-    this.pessoa,
-  });
+  const AvaliacaoScreen({super.key, required this.pessoaId, this.pessoa});
 
   final String pessoaId;
   final PessoaModel? pessoa;
@@ -89,7 +86,8 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
       );
       context.pop();
     } else if (result case Failure()) {
-      final msg = _avaliacaoViewModel.errorMessage.value ??
+      final msg =
+          _avaliacaoViewModel.errorMessage.value ??
           'Não foi possível salvar a avaliação.';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -109,7 +107,11 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
 
     return Scaffold(
       appBar: AppBar(
-        title: Text(apelidoPessoa.isNotEmpty ? 'Avaliar $apelidoPessoa' : 'Avaliar Pessoa'),
+        title: Text(
+          apelidoPessoa.isNotEmpty
+              ? 'Avaliar $apelidoPessoa'
+              : 'Avaliar Pessoa',
+        ),
       ),
       body: _isAutoavaliacao
           ? _buildBloqueioAutoavaliacao(context)
@@ -118,7 +120,8 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
                 final isLoading = _avaliacaoViewModel.isLoading.value;
                 final pontuacao = _avaliacaoViewModel.pontuacaoTotal.value;
                 final notas = _avaliacaoViewModel.notas.value;
-                final jaAvaliou = _avaliacaoViewModel.avaliacaoExistente.value != null;
+                final jaAvaliou =
+                    _avaliacaoViewModel.avaliacaoExistente.value != null;
 
                 return Column(
                   children: [
@@ -303,9 +306,7 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
               minHeight: 8,
               backgroundColor: colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
-                pontuacao >= 60
-                    ? Colors.amber.shade700
-                    : colorScheme.primary,
+                pontuacao >= 60 ? Colors.amber.shade700 : colorScheme.primary,
               ),
             ),
           ),
@@ -457,10 +458,7 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
                 : const Icon(Icons.check_circle_outline),
             label: Text(
               jaAvaliou ? 'Atualizar Avaliação' : 'Salvar Avaliação',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-              ),
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
             ),
           ),
         ),

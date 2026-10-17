@@ -27,9 +27,7 @@ class SalvarAvaliacaoUseCase {
     // Bloqueio de autoavaliação
     if (pessoaCriadorUid != null &&
         avaliacao.avaliadorUid == pessoaCriadorUid) {
-      return Failure(
-        Exception('Não é permitido avaliar a si mesmo.'),
-      );
+      return Failure(Exception('Não é permitido avaliar a si mesmo.'));
     }
 
     // Validação dos 15 critérios com notas de 1 a 5
@@ -41,8 +39,9 @@ class SalvarAvaliacaoUseCase {
       );
     }
 
-    final pontuacaoCalculada =
-        CriterioAvaliacao.calcularPontuacaoTotal(avaliacao.notas);
+    final pontuacaoCalculada = CriterioAvaliacao.calcularPontuacaoTotal(
+      avaliacao.notas,
+    );
 
     if (pontuacaoCalculada < CriterioAvaliacao.pontuacaoMinima ||
         pontuacaoCalculada > CriterioAvaliacao.pontuacaoMaxima) {

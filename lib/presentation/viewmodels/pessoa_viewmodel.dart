@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import '../../core/command/command.dart';
 import '../../core/result/result.dart';
 import '../../domain/facades/pessoa_facade.dart';
@@ -19,10 +20,12 @@ class PessoaViewModel extends ChangeNotifier {
       final busca = buscaTexto.value.trim().toLowerCase();
 
       return lista.where((p) {
-        final matchCurso = curso == null ||
+        final matchCurso =
+            curso == null ||
             curso.isEmpty ||
             p.curso.toUpperCase() == curso.toUpperCase();
-        final matchBusca = busca.isEmpty ||
+        final matchBusca =
+            busca.isEmpty ||
             p.nome.toLowerCase().contains(busca) ||
             p.apelido.toLowerCase().contains(busca);
         return matchCurso && matchBusca;

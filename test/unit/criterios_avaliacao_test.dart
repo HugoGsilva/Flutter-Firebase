@@ -37,32 +37,32 @@ void main() {
       expect(CriterioAvaliacao.isNotaValida(-1), isFalse);
     });
 
-    test('deve calcular corretamente a pontuação mínima (15) e máxima (75)', () {
-      final notasMinimas = {
-        for (final c in CriterioAvaliacao.values) c.id: 1,
-      };
-      final notasMaximas = {
-        for (final c in CriterioAvaliacao.values) c.id: 5,
-      };
+    test(
+      'deve calcular corretamente a pontuação mínima (15) e máxima (75)',
+      () {
+        final notasMinimas = {
+          for (final c in CriterioAvaliacao.values) c.id: 1,
+        };
+        final notasMaximas = {
+          for (final c in CriterioAvaliacao.values) c.id: 5,
+        };
 
-      expect(CriterioAvaliacao.validarNotas(notasMinimas), isTrue);
-      expect(CriterioAvaliacao.validarNotas(notasMaximas), isTrue);
+        expect(CriterioAvaliacao.validarNotas(notasMinimas), isTrue);
+        expect(CriterioAvaliacao.validarNotas(notasMaximas), isTrue);
 
-      expect(
-        CriterioAvaliacao.calcularPontuacaoTotal(notasMinimas),
-        equals(15),
-      );
-      expect(
-        CriterioAvaliacao.calcularPontuacaoTotal(notasMaximas),
-        equals(75),
-      );
-    });
+        expect(
+          CriterioAvaliacao.calcularPontuacaoTotal(notasMinimas),
+          equals(15),
+        );
+        expect(
+          CriterioAvaliacao.calcularPontuacaoTotal(notasMaximas),
+          equals(75),
+        );
+      },
+    );
 
     test('deve invalidar mapa de notas com critério faltando ou nota fora da faixa', () {
-      final notasIncompletas = {
-        'resenha': 5,
-        'aura': 4,
-      };
+      final notasIncompletas = {'resenha': 5, 'aura': 4};
       expect(CriterioAvaliacao.validarNotas(notasIncompletas), isFalse);
 
       final notasComInvalida = {

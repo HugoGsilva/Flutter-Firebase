@@ -26,21 +26,14 @@ class AuthFacade {
     required String email,
     required String senha,
   }) {
-    return cadastrarUsuarioUseCase(
-      nome: nome,
-      email: email,
-      senha: senha,
-    );
+    return cadastrarUsuarioUseCase(nome: nome, email: email, senha: senha);
   }
 
   Future<Result<UsuarioModel>> loginComEmail({
     required String email,
     required String senha,
   }) {
-    return loginEmailUseCase(
-      email: email,
-      senha: senha,
-    );
+    return loginEmailUseCase(email: email, senha: senha);
   }
 
   Future<Result<UsuarioModel>> loginComGoogle() {

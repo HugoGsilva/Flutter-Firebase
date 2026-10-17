@@ -97,9 +97,7 @@ void setupDependencies({
   sl.reset();
 
   // 1. Services
-  sl.registerLazySingleton<AuthService>(
-    () => authService ?? AuthService(),
-  );
+  sl.registerLazySingleton<AuthService>(() => authService ?? AuthService());
   sl.registerLazySingleton<FirestoreService>(
     () => firestoreService ?? FirestoreService(),
   );
@@ -244,7 +242,5 @@ void setupDependencies({
   sl.registerLazySingleton<ThemeViewModel>(
     () => ThemeViewModel(sl<TemaFacade>()),
   );
-  sl.registerLazySingleton<HomeViewModel>(
-    () => HomeViewModel(),
-  );
+  sl.registerLazySingleton<HomeViewModel>(() => HomeViewModel());
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:signals_flutter/signals_flutter.dart';
+
 import 'firebase_options.dart';
 import 'core/di/injection.dart';
 import 'core/theme/app_theme.dart';
@@ -9,9 +10,7 @@ import 'presentation/viewmodels/theme_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   setupDependencies();
   runApp(const MainApp());
 }

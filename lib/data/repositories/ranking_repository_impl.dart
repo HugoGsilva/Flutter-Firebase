@@ -11,10 +11,13 @@ class RankingRepositoryImpl implements RankingRepository {
   final AvaliacaoRepository _avaliacaoRepository;
 
   @override
-  Future<List<RankingItemModel>> obterRankingPessoal(String avaliadorUid) async {
+  Future<List<RankingItemModel>> obterRankingPessoal(
+    String avaliadorUid,
+  ) async {
     final pessoas = await _pessoaRepository.listarTodas();
-    final avaliacoes =
-        await _avaliacaoRepository.listarPorAvaliador(avaliadorUid);
+    final avaliacoes = await _avaliacaoRepository.listarPorAvaliador(
+      avaliadorUid,
+    );
 
     final pessoasMap = {for (final p in pessoas) p.id: p};
     final itens = <RankingItemModel>[];
@@ -38,8 +41,7 @@ class RankingRepositoryImpl implements RankingRepository {
     itens.sort((a, b) => b.pontuacao.compareTo(a.pontuacao));
 
     return [
-      for (int i = 0; i < itens.length; i++)
-        itens[i].copyWith(posicao: i + 1),
+      for (int i = 0; i < itens.length; i++) itens[i].copyWith(posicao: i + 1),
     ];
   }
 
@@ -96,8 +98,7 @@ class RankingRepositoryImpl implements RankingRepository {
     });
 
     return [
-      for (int i = 0; i < itens.length; i++)
-        itens[i].copyWith(posicao: i + 1),
+      for (int i = 0; i < itens.length; i++) itens[i].copyWith(posicao: i + 1),
     ];
   }
 }

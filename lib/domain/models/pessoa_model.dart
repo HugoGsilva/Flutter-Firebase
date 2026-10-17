@@ -29,7 +29,8 @@ class PessoaModel {
   static const int turmaAnoMinimo = 1998;
   static const int turmaAnoMaximo = 2026;
 
-  static bool isCursoValido(String curso) => cursosValidos.contains(curso.toUpperCase());
+  static bool isCursoValido(String curso) =>
+      cursosValidos.contains(curso.toUpperCase());
 
   static bool isTurmaValida(int turma) =>
       turma >= turmaAnoMinimo && turma <= turmaAnoMaximo;
@@ -75,7 +76,7 @@ class PessoaModel {
       turma: (map['turma'] as num?)?.toInt() ?? turmaAnoMinimo,
       dataNascimento: map['dataNascimento'] != null
           ? DateTime.tryParse(map['dataNascimento'] as String) ??
-              DateTime(2000, 1, 1)
+                DateTime(2000, 1, 1)
           : DateTime(2000, 1, 1),
       criadoPor: map['criadoPor'] as String? ?? '',
     );

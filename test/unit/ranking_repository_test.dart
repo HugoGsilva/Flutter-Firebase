@@ -42,9 +42,7 @@ class FakeAvaliacaoRepository implements AvaliacaoRepository {
     String pessoaId,
   ) async {
     return avaliacoes
-        .where(
-          (a) => a.avaliadorUid == avaliadorUid && a.pessoaId == pessoaId,
-        )
+        .where((a) => a.avaliadorUid == avaliadorUid && a.pessoaId == pessoaId)
         .firstOrNull;
   }
 
@@ -94,108 +92,114 @@ void main() {
       criadoPor: 'user_z',
     );
 
-    test('deve calcular corretamente a média e posições do ranking global', () async {
-      final avaliacoes = [
-        // Ana: 60 + 70 -> média 65.0 (2 avaliações)
-        AvaliacaoModel(
-          id: 'u1_p1',
-          avaliadorUid: 'u1',
-          pessoaId: 'p1',
-          notas: const {},
-          pontuacaoTotal: 60,
-          dataAvaliacao: DateTime.now(),
-        ),
-        AvaliacaoModel(
-          id: 'u2_p1',
-          avaliadorUid: 'u2',
-          pessoaId: 'p1',
-          notas: const {},
-          pontuacaoTotal: 70,
-          dataAvaliacao: DateTime.now(),
-        ),
-        // João: 58 (1 avaliação) -> média 58.0
-        AvaliacaoModel(
-          id: 'u1_p2',
-          avaliadorUid: 'u1',
-          pessoaId: 'p2',
-          notas: const {},
-          pontuacaoTotal: 58,
-          dataAvaliacao: DateTime.now(),
-        ),
-        // Maria: 54 (1 avaliação) -> média 54.0
-        AvaliacaoModel(
-          id: 'u1_p3',
-          avaliadorUid: 'u1',
-          pessoaId: 'p3',
-          notas: const {},
-          pontuacaoTotal: 54,
-          dataAvaliacao: DateTime.now(),
-        ),
-      ];
+    test(
+      'deve calcular corretamente a média e posições do ranking global',
+      () async {
+        final avaliacoes = [
+          // Ana: 60 + 70 -> média 65.0 (2 avaliações)
+          AvaliacaoModel(
+            id: 'u1_p1',
+            avaliadorUid: 'u1',
+            pessoaId: 'p1',
+            notas: const {},
+            pontuacaoTotal: 60,
+            dataAvaliacao: DateTime.now(),
+          ),
+          AvaliacaoModel(
+            id: 'u2_p1',
+            avaliadorUid: 'u2',
+            pessoaId: 'p1',
+            notas: const {},
+            pontuacaoTotal: 70,
+            dataAvaliacao: DateTime.now(),
+          ),
+          // João: 58 (1 avaliação) -> média 58.0
+          AvaliacaoModel(
+            id: 'u1_p2',
+            avaliadorUid: 'u1',
+            pessoaId: 'p2',
+            notas: const {},
+            pontuacaoTotal: 58,
+            dataAvaliacao: DateTime.now(),
+          ),
+          // Maria: 54 (1 avaliação) -> média 54.0
+          AvaliacaoModel(
+            id: 'u1_p3',
+            avaliadorUid: 'u1',
+            pessoaId: 'p3',
+            notas: const {},
+            pontuacaoTotal: 54,
+            dataAvaliacao: DateTime.now(),
+          ),
+        ];
 
-      final rankingRepo = RankingRepositoryImpl(
-        FakePessoaRepository([pessoaAna, pessoaJoao, pessoaMaria]),
-        FakeAvaliacaoRepository(avaliacoes),
-      );
+        final rankingRepo = RankingRepositoryImpl(
+          FakePessoaRepository([pessoaAna, pessoaJoao, pessoaMaria]),
+          FakeAvaliacaoRepository(avaliacoes),
+        );
 
-      final ranking = await rankingRepo.obterRankingGlobal();
+        final ranking = await rankingRepo.obterRankingGlobal();
 
-      expect(ranking.length, 3);
+        expect(ranking.length, 3);
 
-      expect(ranking[0].pessoa.nome, 'Ana Clara');
-      expect(ranking[0].posicao, 1);
-      expect(ranking[0].mediaPontuacao, 65.0);
-      expect(ranking[0].totalAvaliacoes, 2);
-      expect(ranking[0].pontuacao, 65);
+        expect(ranking[0].pessoa.nome, 'Ana Clara');
+        expect(ranking[0].posicao, 1);
+        expect(ranking[0].mediaPontuacao, 65.0);
+        expect(ranking[0].totalAvaliacoes, 2);
+        expect(ranking[0].pontuacao, 65);
 
-      expect(ranking[1].pessoa.nome, 'João Pedro');
-      expect(ranking[1].posicao, 2);
-      expect(ranking[1].mediaPontuacao, 58.0);
-      expect(ranking[1].totalAvaliacoes, 1);
-      expect(ranking[1].pontuacao, 58);
+        expect(ranking[1].pessoa.nome, 'João Pedro');
+        expect(ranking[1].posicao, 2);
+        expect(ranking[1].mediaPontuacao, 58.0);
+        expect(ranking[1].totalAvaliacoes, 1);
+        expect(ranking[1].pontuacao, 58);
 
-      expect(ranking[2].pessoa.nome, 'Maria Eduarda');
-      expect(ranking[2].posicao, 3);
-      expect(ranking[2].mediaPontuacao, 54.0);
-      expect(ranking[2].totalAvaliacoes, 1);
-      expect(ranking[2].pontuacao, 54);
-    });
+        expect(ranking[2].pessoa.nome, 'Maria Eduarda');
+        expect(ranking[2].posicao, 3);
+        expect(ranking[2].mediaPontuacao, 54.0);
+        expect(ranking[2].totalAvaliacoes, 1);
+        expect(ranking[2].pontuacao, 54);
+      },
+    );
 
-    test('deve ordenar ranking pessoal pelas notas atribuídas pelo avaliador', () async {
-      final avaliacoes = [
-        AvaliacaoModel(
-          id: 'u1_p1',
-          avaliadorUid: 'u1',
-          pessoaId: 'p1',
-          notas: const {},
-          pontuacaoTotal: 68,
-          dataAvaliacao: DateTime.now(),
-        ),
-        AvaliacaoModel(
-          id: 'u1_p2',
-          avaliadorUid: 'u1',
-          pessoaId: 'p2',
-          notas: const {},
-          pontuacaoTotal: 58,
-          dataAvaliacao: DateTime.now(),
-        ),
-      ];
+    test(
+      'deve ordenar ranking pessoal pelas notas atribuídas pelo avaliador',
+      () async {
+        final avaliacoes = [
+          AvaliacaoModel(
+            id: 'u1_p1',
+            avaliadorUid: 'u1',
+            pessoaId: 'p1',
+            notas: const {},
+            pontuacaoTotal: 68,
+            dataAvaliacao: DateTime.now(),
+          ),
+          AvaliacaoModel(
+            id: 'u1_p2',
+            avaliadorUid: 'u1',
+            pessoaId: 'p2',
+            notas: const {},
+            pontuacaoTotal: 58,
+            dataAvaliacao: DateTime.now(),
+          ),
+        ];
 
-      final rankingRepo = RankingRepositoryImpl(
-        FakePessoaRepository([pessoaAna, pessoaJoao, pessoaMaria]),
-        FakeAvaliacaoRepository(avaliacoes),
-      );
+        final rankingRepo = RankingRepositoryImpl(
+          FakePessoaRepository([pessoaAna, pessoaJoao, pessoaMaria]),
+          FakeAvaliacaoRepository(avaliacoes),
+        );
 
-      final rankingPessoal = await rankingRepo.obterRankingPessoal('u1');
+        final rankingPessoal = await rankingRepo.obterRankingPessoal('u1');
 
-      expect(rankingPessoal.length, 2);
-      expect(rankingPessoal[0].pessoa.nome, 'Ana Clara');
-      expect(rankingPessoal[0].posicao, 1);
-      expect(rankingPessoal[0].pontuacao, 68);
+        expect(rankingPessoal.length, 2);
+        expect(rankingPessoal[0].pessoa.nome, 'Ana Clara');
+        expect(rankingPessoal[0].posicao, 1);
+        expect(rankingPessoal[0].pontuacao, 68);
 
-      expect(rankingPessoal[1].pessoa.nome, 'João Pedro');
-      expect(rankingPessoal[1].posicao, 2);
-      expect(rankingPessoal[1].pontuacao, 58);
-    });
+        expect(rankingPessoal[1].pessoa.nome, 'João Pedro');
+        expect(rankingPessoal[1].posicao, 2);
+        expect(rankingPessoal[1].pontuacao, 58);
+      },
+    );
   });
 }

@@ -9,10 +9,13 @@ class VerificarAutoavaliacaoUseCase {
     String? pessoaId,
   }) {
     if (avaliadorUid.isEmpty) {
-      return const Failure(FormatException('Avaliador UID não pode ser vazio.'));
+      return const Failure(
+        FormatException('Avaliador UID não pode ser vazio.'),
+      );
     }
 
-    final isAutoavaliacao = avaliadorUid == pessoaCriadorUid ||
+    final isAutoavaliacao =
+        avaliadorUid == pessoaCriadorUid ||
         (pessoaId != null && avaliadorUid == pessoaId);
 
     return Success(isAutoavaliacao);
