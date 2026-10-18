@@ -27,8 +27,8 @@ class DefaultFirebaseOptions {
   );
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyA08aL2I9Lde8CfkdNeIG0WctKzv08-sHY',
-    appId: '1:605397088312:web:75b4f69fabcf847d1a8ecd',
+    apiKey: 'AIzaSyDkxUmEAIrZeVkIJBW_XeIlZiWDp_ieRno',
+    appId: '1:605397088312:android:49f08d1e4e7fbbe51a8ecd',
     messagingSenderId: '605397088312',
     projectId: 'piramid-27be8',
     storageBucket: 'piramid-27be8.firebasestorage.app',
