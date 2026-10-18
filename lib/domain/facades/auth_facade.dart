@@ -5,6 +5,7 @@ import '../usecases/auth/login_email_usecase.dart';
 import '../usecases/auth/login_google_usecase.dart';
 import '../usecases/auth/logout_usecase.dart';
 import '../usecases/auth/verificar_autenticado_usecase.dart';
+import '../usecases/auth/vincular_pessoa_usecase.dart';
 
 class AuthFacade {
   const AuthFacade({
@@ -13,6 +14,7 @@ class AuthFacade {
     required this.loginGoogleUseCase,
     required this.logoutUseCase,
     required this.verificarAutenticadoUseCase,
+    required this.vincularPessoaUseCase,
   });
 
   final CadastrarUsuarioUseCase cadastrarUsuarioUseCase;
@@ -20,8 +22,9 @@ class AuthFacade {
   final LoginGoogleUseCase loginGoogleUseCase;
   final LogoutUseCase logoutUseCase;
   final VerificarAutenticadoUseCase verificarAutenticadoUseCase;
+  final VincularPessoaUseCase vincularPessoaUseCase;
 
-  Future<Result<UsuarioModel>> cadastrarComEmail({
+  Future<Result<UsuarioModel>> criarConta({
     required String nome,
     required String email,
     required String senha,
@@ -29,22 +32,26 @@ class AuthFacade {
     return cadastrarUsuarioUseCase(nome: nome, email: email, senha: senha);
   }
 
-  Future<Result<UsuarioModel>> loginComEmail({
+  Future<Result<UsuarioModel>> login({
     required String email,
     required String senha,
   }) {
     return loginEmailUseCase(email: email, senha: senha);
   }
 
-  Future<Result<UsuarioModel>> loginComGoogle() {
-    return loginGoogleUseCase();
-  }
+  Future<Result<UsuarioModel>> loginComGoogle() => loginGoogleUseCase();
 
-  Future<Result<void>> logout() {
-    return logoutUseCase();
-  }
-
-  Result<UsuarioModel?> verificarAutenticado() {
+  Future<Result<UsuarioModel?>> verificarAutenticacao() {
     return verificarAutenticadoUseCase();
+  }
+
+  Future<UsuarioModel?> usuarioEmCache() {
+    return verificarAutenticadoUseCase.usuarioEmCache();
+  }
+
+  Future<Result<void>> logout() => logoutUseCase();
+
+  Future<Result<UsuarioModel>> vincularPessoa(String? pessoaId) {
+    return vincularPessoaUseCase(pessoaId);
   }
 }

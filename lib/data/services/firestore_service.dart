@@ -14,124 +14,129 @@ class FirestoreService {
   static const String colecaoPessoas = 'pessoas';
   static const String colecaoAvaliacoes = 'avaliacoes';
 
+  CollectionReference<Map<String, dynamic>> get _usuarios =>
+      _firestore.collection(colecaoUsuarios);
+  CollectionReference<Map<String, dynamic>> get _pessoas =>
+      _firestore.collection(colecaoPessoas);
+  CollectionReference<Map<String, dynamic>> get _avaliacoes =>
+      _firestore.collection(colecaoAvaliacoes);
+
   // --- Usuários ---
 
+  /// Grava os dados de perfil sem sobrescrever o vínculo com a pessoa.
   Future<void> salvarUsuario(UsuarioModel usuario) async {
-    await _firestore
-        .collection(colecaoUsuarios)
-        .doc(usuario.uid)
-        .set(usuario.toMap(), SetOptions(merge: true));
+    final dados = usuario.toMap()..remove('pessoaId');
+    await _usuarios.doc(usuario.uid).set(dados, SetOptions(merge: true));
   }
 
   Future<UsuarioModel?> obterUsuario(String uid) async {
-    final doc = await _firestore.collection(colecaoUsuarios).doc(uid).get();
-    if (!doc.exists || doc.data() == null) {
-      return null;
-    }
-    return UsuarioModel.fromMap(doc.data()!);
+    final doc = await _usuarios.doc(uid).get();
+    final dados = doc.data();
+    if (!doc.exists || dados == null) return null;
+    return UsuarioModel.fromMap(dados, uid: doc.id);
+  }
+
+  Future<UsuarioModel?> buscarUsuarioPorPessoa(String pessoaId) async {
+    final snapshot = await _usuarios
+        .where('pessoaId', isEqualTo: pessoaId)
+        .limit(1)
+        .get();
+    if (snapshot.docs.isEmpty) return null;
+    final doc = snapshot.docs.first;
+    return UsuarioModel.fromMap(doc.data(), uid: doc.id);
+  }
+
+  Future<void> atualizarPessoaVinculada(String uid, String? pessoaId) async {
+    await _usuarios.doc(uid).set({
+      'pessoaId': pessoaId,
+    }, SetOptions(merge: true));
   }
 
   // --- Pessoas ---
 
-  Future<void> salvarPessoa(PessoaModel pessoa) async {
-    await _firestore
-        .collection(colecaoPessoas)
-        .doc(pessoa.id)
-        .set(pessoa.toMap());
+  Future<String> salvarPessoa(PessoaModel pessoa) async {
+    final ref = pessoa.id.isEmpty ? _pessoas.doc() : _pessoas.doc(pessoa.id);
+    await ref.set(pessoa.toMap());
+    return ref.id;
   }
 
   Future<void> atualizarPessoa(PessoaModel pessoa) async {
-    await _firestore
-        .collection(colecaoPessoas)
-        .doc(pessoa.id)
-        .update(pessoa.toMap());
+    final dados = pessoa.toMap()..remove('criadoPor');
+    await _pessoas.doc(pessoa.id).update(dados);
   }
 
+  /// Exclui a pessoa junto com as avaliações recebidas, para que elas não
+  /// continuem contando nos rankings.
   Future<void> removerPessoa(String id) async {
-    await _firestore.collection(colecaoPessoas).doc(id).delete();
+    final avaliacoes = await _avaliacoes.where('pessoaId', isEqualTo: id).get();
 
-    // Remove também as avaliações vinculadas a esta pessoa
-    final snapshot = await _firestore
-        .collection(colecaoAvaliacoes)
-        .where('pessoaId', isEqualTo: id)
-        .get();
-
-    for (final doc in snapshot.docs) {
-      await doc.reference.delete();
+    final batch = _firestore.batch();
+    for (final doc in avaliacoes.docs) {
+      batch.delete(doc.reference);
     }
+    batch.delete(_pessoas.doc(id));
+    await batch.commit();
   }
 
   Future<PessoaModel?> obterPessoa(String id) async {
-    final doc = await _firestore.collection(colecaoPessoas).doc(id).get();
-    if (!doc.exists || doc.data() == null) {
-      return null;
-    }
-    return PessoaModel.fromMap(doc.data()!);
+    final doc = await _pessoas.doc(id).get();
+    final dados = doc.data();
+    if (!doc.exists || dados == null) return null;
+    return PessoaModel.fromMap(dados, id: doc.id);
   }
 
   Future<List<PessoaModel>> listarPessoas() async {
-    final snapshot = await _firestore.collection(colecaoPessoas).get();
-    return snapshot.docs.map((doc) => PessoaModel.fromMap(doc.data())).toList();
+    final snapshot = await _pessoas.orderBy('nome').get();
+    return snapshot.docs
+        .map((doc) => PessoaModel.fromMap(doc.data(), id: doc.id))
+        .toList();
   }
 
   // --- Avaliações ---
 
   Future<void> salvarAvaliacao(AvaliacaoModel avaliacao) async {
-    final idCanonico = AvaliacaoModel.gerarIdCanonico(
+    final id = AvaliacaoModel.gerarIdCanonico(
       avaliacao.avaliadorUid,
       avaliacao.pessoaId,
     );
-    final dados = avaliacao.copyWith(id: idCanonico).toMap();
-
-    await _firestore.collection(colecaoAvaliacoes).doc(idCanonico).set(dados);
+    await _avaliacoes.doc(id).set(avaliacao.toMap());
   }
 
   Future<AvaliacaoModel?> obterAvaliacao(
     String avaliadorUid,
     String pessoaId,
   ) async {
-    final idCanonico = AvaliacaoModel.gerarIdCanonico(avaliadorUid, pessoaId);
-    final doc = await _firestore
-        .collection(colecaoAvaliacoes)
-        .doc(idCanonico)
-        .get();
-
-    if (!doc.exists || doc.data() == null) {
-      return null;
-    }
-    return AvaliacaoModel.fromMap(doc.data()!);
+    final id = AvaliacaoModel.gerarIdCanonico(avaliadorUid, pessoaId);
+    final doc = await _avaliacoes.doc(id).get();
+    final dados = doc.data();
+    if (!doc.exists || dados == null) return null;
+    return AvaliacaoModel.fromMap(dados, id: doc.id);
   }
 
-  Future<List<AvaliacaoModel>> listarAvaliacoesPorPessoa(
-    String pessoaId,
-  ) async {
-    final snapshot = await _firestore
-        .collection(colecaoAvaliacoes)
-        .where('pessoaId', isEqualTo: pessoaId)
-        .get();
-
-    return snapshot.docs
-        .map((doc) => AvaliacaoModel.fromMap(doc.data()))
-        .toList();
+  Future<List<AvaliacaoModel>> listarAvaliacoesPorPessoa(String pessoaId) {
+    return _listarAvaliacoes(
+      _avaliacoes.where('pessoaId', isEqualTo: pessoaId),
+    );
   }
 
   Future<List<AvaliacaoModel>> listarAvaliacoesPorAvaliador(
     String avaliadorUid,
-  ) async {
-    final snapshot = await _firestore
-        .collection(colecaoAvaliacoes)
-        .where('avaliadorUid', isEqualTo: avaliadorUid)
-        .get();
-
-    return snapshot.docs
-        .map((doc) => AvaliacaoModel.fromMap(doc.data()))
-        .toList();
+  ) {
+    return _listarAvaliacoes(
+      _avaliacoes.where('avaliadorUid', isEqualTo: avaliadorUid),
+    );
   }
 
-  Future<List<AvaliacaoModel>> listarTodasAvaliacoes() async {
-    final snapshot = await _firestore.collection(colecaoAvaliacoes).get();
+  Future<List<AvaliacaoModel>> listarTodasAvaliacoes() {
+    return _listarAvaliacoes(_avaliacoes);
+  }
+
+  Future<List<AvaliacaoModel>> _listarAvaliacoes(
+    Query<Map<String, dynamic>> query,
+  ) async {
+    final snapshot = await query.get();
     return snapshot.docs
-        .map((doc) => AvaliacaoModel.fromMap(doc.data()))
+        .map((doc) => AvaliacaoModel.fromMap(doc.data(), id: doc.id))
         .toList();
   }
 }

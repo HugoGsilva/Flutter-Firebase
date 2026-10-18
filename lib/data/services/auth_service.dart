@@ -1,25 +1,22 @@
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 
 import '../../domain/models/usuario_model.dart';
 
 class AuthService {
-  AuthService({FirebaseAuth? firebaseAuth, GoogleSignIn? googleSignIn})
-    : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance,
-      _googleSignIn = googleSignIn ?? GoogleSignIn.instance;
+  AuthService({FirebaseAuth? firebaseAuth})
+    : _firebaseAuth = firebaseAuth ?? FirebaseAuth.instance;
 
   final FirebaseAuth _firebaseAuth;
-  final GoogleSignIn _googleSignIn;
 
   UsuarioModel? get currentUser {
     final user = _firebaseAuth.currentUser;
-    return user != null ? _mapFirebaseUser(user) : null;
+    return user != null ? mapearUsuario(user) : null;
   }
 
-  Stream<UsuarioModel?> get authStateChanges {
-    return _firebaseAuth.authStateChanges().map(
-      (user) => user != null ? _mapFirebaseUser(user) : null,
-    );
+  /// Primeiro estado emitido pelo Firebase depois de restaurar a sessão salva.
+  Future<UsuarioModel?> aguardarEstadoInicial() async {
+    final user = await _firebaseAuth.authStateChanges().first;
+    return user != null ? mapearUsuario(user) : null;
   }
 
   Future<UsuarioModel?> cadastrarEmailSenha({
@@ -32,16 +29,10 @@ class AuthService {
       password: password,
     );
     final user = credential.user;
-    if (user != null) {
-      if (nome.isNotEmpty) {
-        await user.updateDisplayName(nome);
-      }
-      return _mapFirebaseUser(
-        user,
-        overrideNome: nome.isNotEmpty ? nome : null,
-      );
-    }
-    return null;
+    if (user == null) return null;
+
+    await user.updateDisplayName(nome);
+    return mapearUsuario(user, nome: nome);
   }
 
   Future<UsuarioModel?> loginEmailSenha({
@@ -53,35 +44,19 @@ class AuthService {
       password: password,
     );
     final user = credential.user;
-    return user != null ? _mapFirebaseUser(user) : null;
+    return user != null ? mapearUsuario(user) : null;
   }
 
-  Future<UsuarioModel?> loginGoogle() async {
-    final googleUser = await _googleSignIn.authenticate();
-    final googleAuth = googleUser.authentication;
-    final clientAuth = await googleUser.authorizationClient
-        .authorizationForScopes(['email', 'profile']);
-    final credential = GoogleAuthProvider.credential(
-      accessToken: clientAuth?.accessToken,
-      idToken: googleAuth.idToken,
-    );
-    final userCredential = await _firebaseAuth.signInWithCredential(credential);
-    final user = userCredential.user;
-    return user != null ? _mapFirebaseUser(user) : null;
-  }
+  Future<void> logout() => _firebaseAuth.signOut();
 
-  Future<void> logout() async {
-    await Future.wait([_firebaseAuth.signOut(), _googleSignIn.signOut()]);
-  }
-
-  UsuarioModel _mapFirebaseUser(User user, {String? overrideNome}) {
+  static UsuarioModel mapearUsuario(User user, {String? nome}) {
     final provider = user.providerData.isNotEmpty
         ? user.providerData.first.providerId
         : 'password';
 
     return UsuarioModel(
       uid: user.uid,
-      nome: overrideNome ?? user.displayName ?? '',
+      nome: nome ?? user.displayName ?? '',
       email: user.email ?? '',
       foto: user.photoURL,
       provider: provider,

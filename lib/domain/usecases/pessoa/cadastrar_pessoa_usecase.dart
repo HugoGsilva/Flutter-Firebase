@@ -1,49 +1,33 @@
+import '../../../core/result/app_exception.dart';
 import '../../../core/result/result.dart';
 import '../../models/pessoa_model.dart';
+import '../../repositories/auth_repository.dart';
 import '../../repositories/pessoa_repository.dart';
 
 class CadastrarPessoaUseCase {
-  const CadastrarPessoaUseCase(this._repository);
+  const CadastrarPessoaUseCase(this._repository, this._authRepository);
 
   final PessoaRepository _repository;
+  final AuthRepository _authRepository;
 
-  Future<Result<void>> call(PessoaModel pessoa) async {
-    final nomeLimpo = pessoa.nome.trim();
-    if (nomeLimpo.isEmpty) {
-      return const Failure(FormatException('O nome não pode ser vazio.'));
-    }
-
-    if (!PessoaModel.isCursoValido(pessoa.curso)) {
-      return Failure(
-        FormatException(
-          'Curso inválido. Escolha um dos cursos: ${PessoaModel.cursosValidos.join(", ")}.',
-        ),
-      );
-    }
-
-    if (!PessoaModel.isTurmaValida(pessoa.turma)) {
-      return Failure(
-        FormatException(
-          'Turma/Ano deve estar entre ${PessoaModel.turmaAnoMinimo} e ${PessoaModel.turmaAnoMaximo}.',
-        ),
-      );
-    }
-
-    if (pessoa.criadoPor.trim().isEmpty) {
+  /// O cadastro da pessoa não cria nenhuma conta de autenticação; apenas
+  /// registra quem fez o cadastro em `criadoPor`.
+  Future<Result<PessoaModel>> call(PessoaModel pessoa) async {
+    final usuario = _authRepository.usuarioAtual;
+    if (usuario == null) {
       return const Failure(
-        FormatException('Identificador do criador é obrigatório.'),
+        AppException('Você precisa estar autenticado para cadastrar.'),
       );
     }
+
+    final erro = pessoa.validar();
+    if (erro != null) return Failure(FormatException(erro));
 
     try {
-      await _repository.cadastrarPessoa(
-        pessoa.copyWith(
-          nome: nomeLimpo,
-          apelido: pessoa.apelido.trim(),
-          curso: pessoa.curso.toUpperCase().trim(),
-        ),
+      final salva = await _repository.cadastrarPessoa(
+        pessoa.normalizada().copyWith(id: '', criadoPor: usuario.uid),
       );
-      return const Success(null);
+      return Success(salva);
     } on Exception catch (e) {
       return Failure(e);
     }

@@ -4,7 +4,9 @@ import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
+import '../../../core/router/app_router.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../widgets/feedback.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -38,45 +40,25 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
-    final email = _emailController.text.trim();
-    final senha = _senhaController.text;
-
-    final result = await _authViewModel.loginCommand(email, senha);
-    if (!mounted) return;
-
-    if (result case Success()) {
-      context.go('/home');
-    } else if (result case Failure()) {
-      final msg =
-          _authViewModel.errorMessage.value ?? 'Erro ao realizar login.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      _authViewModel.limparErro();
-    }
+    final result = await _authViewModel.loginCommand(
+      _emailController.text.trim(),
+      _senhaController.text,
+    );
+    _tratarResultado(result, 'Erro ao realizar login.');
   }
 
   Future<void> _handleGoogleLogin() async {
     FocusScope.of(context).unfocus();
     final result = await _authViewModel.loginGoogleCommand();
-    if (!mounted) return;
+    _tratarResultado(result, 'Erro ao entrar com Google.');
+  }
 
+  void _tratarResultado(Result<Object?> result, String mensagemPadrao) {
+    if (!mounted) return;
     if (result case Success()) {
-      context.go('/home');
-    } else if (result case Failure()) {
-      final msg =
-          _authViewModel.errorMessage.value ?? 'Erro ao entrar com Google.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      context.go(AppRoutes.home);
+    } else {
+      mostrarErro(context, _authViewModel.errorMessage.value ?? mensagemPadrao);
       _authViewModel.limparErro();
     }
   }
@@ -100,7 +82,6 @@ class _LoginScreenState extends State<LoginScreen> {
                     final loading = _authViewModel.isLoading.value;
 
                     return Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Icon(
@@ -118,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 6),
                         Text(
-                          'Acesse sua conta para avaliar e ranquear seus colegas',
+                          'Entre para avaliar e ranquear a galera do campus',
                           textAlign: TextAlign.center,
                           style: theme.textTheme.bodyMedium?.copyWith(
                             color: colorScheme.onSurfaceVariant,
@@ -126,6 +107,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 32),
                         TextFormField(
+                          key: const Key('login_email'),
                           controller: _emailController,
                           keyboardType: TextInputType.emailAddress,
                           autocorrect: false,
@@ -134,13 +116,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             labelText: 'E-mail',
                             hintText: 'seu.email@exemplo.com',
                             prefixIcon: Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(),
                           ),
                           validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Informe seu e-mail';
-                            }
-                            if (!value.contains('@') || !value.contains('.')) {
+                            final email = value?.trim() ?? '';
+                            if (email.isEmpty) return 'Informe seu e-mail';
+                            if (!email.contains('@') || !email.contains('.')) {
                               return 'Informe um e-mail válido';
                             }
                             return null;
@@ -148,32 +128,28 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                         const SizedBox(height: 16),
                         TextFormField(
+                          key: const Key('login_senha'),
                           controller: _senhaController,
                           obscureText: _obscurePassword,
                           enabled: !loading,
+                          onFieldSubmitted: (_) => _handleLogin(),
                           decoration: InputDecoration(
                             labelText: 'Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
-                            border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
                                     ? Icons.visibility_outlined
                                     : Icons.visibility_off_outlined,
                               ),
-                              onPressed: () {
-                                setState(() {
-                                  _obscurePassword = !_obscurePassword;
-                                });
-                              },
+                              onPressed: () => setState(
+                                () => _obscurePassword = !_obscurePassword,
+                              ),
                             ),
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Informe sua senha';
-                            }
-                            if (value.length < 6) {
-                              return 'A senha deve ter pelo menos 6 caracteres';
                             }
                             return null;
                           },
@@ -181,39 +157,21 @@ class _LoginScreenState extends State<LoginScreen> {
                         const SizedBox(height: 24),
                         FilledButton(
                           onPressed: loading ? null : _handleLogin,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
                           child: loading
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
                                   ),
                                 )
-                              : const Text(
-                                  'Entrar',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              : const Text('Entrar'),
                         ),
                         const SizedBox(height: 12),
                         OutlinedButton.icon(
                           onPressed: loading ? null : _handleGoogleLogin,
                           icon: const Icon(Icons.g_mobiledata, size: 28),
-                          label: const Text(
-                            'Entrar com Google',
-                            style: TextStyle(fontSize: 15),
-                          ),
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 12),
-                          ),
+                          label: const Text('Entrar com Google'),
                         ),
                         const SizedBox(height: 20),
                         Wrap(
@@ -229,7 +187,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextButton(
                               onPressed: loading
                                   ? null
-                                  : () => context.push('/register'),
+                                  : () => context.push(AppRoutes.cadastro),
                               child: const Text(
                                 'Criar conta',
                                 style: TextStyle(fontWeight: FontWeight.bold),

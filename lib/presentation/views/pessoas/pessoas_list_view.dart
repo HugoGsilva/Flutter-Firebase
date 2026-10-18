@@ -3,8 +3,12 @@ import 'package:go_router/go_router.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../core/di/injection.dart';
+import '../../../core/router/app_router.dart';
 import '../../../domain/models/pessoa_model.dart';
+import '../../viewmodels/auth_viewmodel.dart';
+import '../../viewmodels/avaliacao_viewmodel.dart';
 import '../../viewmodels/pessoa_viewmodel.dart';
+import '../widgets/feedback.dart';
 
 class PessoasListView extends StatefulWidget {
   const PessoasListView({super.key});
@@ -15,7 +19,9 @@ class PessoasListView extends StatefulWidget {
 
 class _PessoasListViewState extends State<PessoasListView> {
   final _searchController = TextEditingController();
-  PessoaViewModel? _pessoaViewModel;
+  final _pessoaViewModel = sl<PessoaViewModel>();
+  final _avaliacaoViewModel = sl<AvaliacaoViewModel>();
+  final _authViewModel = sl<AuthViewModel>();
 
   static const List<String> _cursosFiltro = [
     'Todos',
@@ -25,12 +31,19 @@ class _PessoasListViewState extends State<PessoasListView> {
   @override
   void initState() {
     super.initState();
-    if (sl.isRegistered<PessoaViewModel>()) {
-      _pessoaViewModel = sl<PessoaViewModel>();
-      _searchController.text = _pessoaViewModel!.buscaTexto.value;
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-        _pessoaViewModel?.carregarPessoasCommand();
-      });
+    _searchController.text = _pessoaViewModel.buscaTexto.value;
+    WidgetsBinding.instance.addPostFrameCallback((_) => _recarregar());
+  }
+
+  Future<void> _recarregar() async {
+    await Future.wait([
+      _pessoaViewModel.carregarPessoasCommand(),
+      _avaliacaoViewModel.carregarMinhasAvaliacoesCommand(),
+    ]);
+    final erro = _pessoaViewModel.errorMessage.value;
+    if (erro != null && mounted) {
+      mostrarErro(context, erro);
+      _pessoaViewModel.limparErro();
     }
   }
 
@@ -42,12 +55,7 @@ class _PessoasListViewState extends State<PessoasListView> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final colorScheme = theme.colorScheme;
-
-    if (_pessoaViewModel == null) {
-      return const Center(child: Text('Carregando pessoas...'));
-    }
+    final colorScheme = Theme.of(context).colorScheme;
 
     return Scaffold(
       body: Column(
@@ -64,12 +72,11 @@ class _PessoasListViewState extends State<PessoasListView> {
                         icon: const Icon(Icons.clear),
                         onPressed: () {
                           _searchController.clear();
-                          _pessoaViewModel?.setBuscaTexto('');
+                          _pessoaViewModel.setBuscaTexto('');
                           setState(() {});
                         },
                       )
                     : null,
-                filled: true,
                 fillColor: colorScheme.surfaceContainerHighest.withValues(
                   alpha: 0.5,
                 ),
@@ -80,39 +87,34 @@ class _PessoasListViewState extends State<PessoasListView> {
                 contentPadding: const EdgeInsets.symmetric(horizontal: 16),
               ),
               onChanged: (value) {
-                _pessoaViewModel?.setBuscaTexto(value);
+                _pessoaViewModel.setBuscaTexto(value);
                 setState(() {});
               },
             ),
           ),
           SizedBox(
             height: 48,
-            child: ListView.separated(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              scrollDirection: Axis.horizontal,
-              itemCount: _cursosFiltro.length,
-              separatorBuilder: (_, _) => const SizedBox(width: 8),
-              itemBuilder: (context, index) {
-                final curso = _cursosFiltro[index];
-                return SignalBuilder(
-                  builder: (context) {
-                    final filtroAtivo = _pessoaViewModel!.filtroCurso.value;
-                    final isSelected = curso == 'Todos'
-                        ? (filtroAtivo == null || filtroAtivo.isEmpty)
+            child: SignalBuilder(
+              builder: (context) {
+                final filtroAtivo = _pessoaViewModel.filtroCurso.value;
+                return ListView.separated(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  scrollDirection: Axis.horizontal,
+                  itemCount: _cursosFiltro.length,
+                  separatorBuilder: (_, _) => const SizedBox(width: 8),
+                  itemBuilder: (context, index) {
+                    final curso = _cursosFiltro[index];
+                    final todos = curso == 'Todos';
+                    final selecionado = todos
+                        ? filtroAtivo == null
                         : filtroAtivo == curso;
 
                     return FilterChip(
-                      selected: isSelected,
+                      selected: selecionado,
                       label: Text(curso),
-                      onSelected: (_) {
-                        if (curso == 'Todos') {
-                          _pessoaViewModel?.setFiltroCurso(null);
-                        } else {
-                          _pessoaViewModel?.setFiltroCurso(
-                            isSelected ? null : curso,
-                          );
-                        }
-                      },
+                      onSelected: (_) => _pessoaViewModel.setFiltroCurso(
+                        todos || selecionado ? null : curso,
+                      ),
                     );
                   },
                 );
@@ -123,68 +125,45 @@ class _PessoasListViewState extends State<PessoasListView> {
           Expanded(
             child: SignalBuilder(
               builder: (context) {
-                final isLoading = _pessoaViewModel!.isLoading.value;
-                final lista = _pessoaViewModel!.pessoasFiltradas.value;
+                final carregando =
+                    _pessoaViewModel.carregarPessoasCommand.runningSignal.value;
+                final lista = _pessoaViewModel.pessoasFiltradas.value;
+                final notas = _avaliacaoViewModel.minhasAvaliacoes.value;
+                final minhaPessoaId =
+                    _authViewModel.currentUser.value?.pessoaId;
 
-                if (isLoading && lista.isEmpty) {
+                if (carregando && lista.isEmpty) {
                   return const Center(child: CircularProgressIndicator());
                 }
 
-                if (lista.isEmpty) {
-                  return RefreshIndicator(
-                    onRefresh: () async {
-                      await _pessoaViewModel?.carregarPessoasCommand();
-                    },
-                    child: ListView(
-                      physics: const AlwaysScrollableScrollPhysics(),
-                      children: [
-                        SizedBox(
-                          height: MediaQuery.of(context).size.height * 0.4,
-                          child: Center(
-                            child: Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.people_outline,
-                                  size: 64,
-                                  color: colorScheme.outline,
-                                ),
-                                const SizedBox(height: 16),
-                                Text(
-                                  'Nenhuma pessoa encontrada',
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                const SizedBox(height: 6),
-                                Text(
-                                  'Cadastre uma nova pessoa no botão "+" abaixo.',
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: colorScheme.onSurfaceVariant,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  );
-                }
-
                 return RefreshIndicator(
-                  onRefresh: () async {
-                    await _pessoaViewModel?.carregarPessoasCommand();
-                  },
-                  child: ListView.separated(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 80),
-                    itemCount: lista.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 8),
-                    itemBuilder: (context, index) {
-                      final pessoa = lista[index];
-                      return _buildPessoaCard(context, pessoa);
-                    },
-                  ),
+                  onRefresh: _recarregar,
+                  child: lista.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: const [
+                            SizedBox(height: 60),
+                            EstadoVazio(
+                              icone: Icons.people_outline,
+                              titulo: 'Nenhuma pessoa encontrada',
+                              mensagem: 'Cadastre uma nova pessoa no botão "Nova Pessoa".',
+                            ),
+                          ],
+                        )
+                      : ListView.separated(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 8, 16, 88),
+                          itemCount: lista.length,
+                          separatorBuilder: (_, _) => const SizedBox(height: 8),
+                          itemBuilder: (context, index) {
+                            final pessoa = lista[index];
+                            return _PessoaCard(
+                              pessoa: pessoa,
+                              minhaNota: notas[pessoa.id]?.pontuacaoTotal,
+                              souEu: pessoa.id == minhaPessoaId,
+                            );
+                          },
+                        ),
                 );
               },
             ),
@@ -192,29 +171,38 @@ class _PessoasListViewState extends State<PessoasListView> {
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.push('/pessoas/novo'),
+        heroTag: 'nova_pessoa',
+        onPressed: () async {
+          await context.push(AppRoutes.novaPessoa);
+          _avaliacaoViewModel.carregarMinhasAvaliacoesCommand();
+        },
         icon: const Icon(Icons.person_add_alt_1_rounded),
         label: const Text('Nova Pessoa'),
       ),
     );
   }
+}
 
-  Widget _buildPessoaCard(BuildContext context, PessoaModel pessoa) {
+class _PessoaCard extends StatelessWidget {
+  const _PessoaCard({
+    required this.pessoa,
+    required this.minhaNota,
+    required this.souEu,
+  });
+
+  final PessoaModel pessoa;
+  final int? minhaNota;
+  final bool souEu;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ),
+      clipBehavior: Clip.antiAlias,
       child: InkWell(
-        borderRadius: BorderRadius.circular(16),
-        onTap: () =>
-            context.push('/pessoas/detalhes/${pessoa.id}', extra: pessoa),
+        onTap: () => context.push(AppRoutes.detalhes(pessoa.id), extra: pessoa),
         child: Padding(
           padding: const EdgeInsets.all(14),
           child: Row(
@@ -235,42 +223,46 @@ class _PessoasListViewState extends State<PessoasListView> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      pessoa.nome,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
+                    Row(
+                      children: [
+                        Flexible(
+                          child: Text(
+                            pessoa.nome,
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (souEu) ...[
+                          const SizedBox(width: 6),
+                          _Etiqueta(
+                            texto: 'Você',
+                            fundo: colorScheme.tertiaryContainer,
+                            cor: colorScheme.onTertiaryContainer,
+                          ),
+                        ],
+                      ],
                     ),
                     if (pessoa.apelido.isNotEmpty)
                       Text(
-                        '@${pessoa.apelido}',
+                        '"${pessoa.apelido}"',
                         style: theme.textTheme.bodySmall?.copyWith(
                           color: colorScheme.onSurfaceVariant,
                         ),
                       ),
                     const SizedBox(height: 6),
-                    Row(
+                    Wrap(
+                      spacing: 8,
+                      runSpacing: 4,
+                      crossAxisAlignment: WrapCrossAlignment.center,
                       children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 8,
-                            vertical: 2,
-                          ),
-                          decoration: BoxDecoration(
-                            color: colorScheme.secondaryContainer,
-                            borderRadius: BorderRadius.circular(6),
-                          ),
-                          child: Text(
-                            pessoa.curso,
-                            style: theme.textTheme.labelSmall?.copyWith(
-                              color: colorScheme.onSecondaryContainer,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
+                        _Etiqueta(
+                          texto: pessoa.curso,
+                          fundo: colorScheme.secondaryContainer,
+                          cor: colorScheme.onSecondaryContainer,
                         ),
-                        const SizedBox(width: 8),
                         Text(
                           'Turma ${pessoa.turma}',
                           style: theme.textTheme.bodySmall?.copyWith(
@@ -282,10 +274,52 @@ class _PessoasListViewState extends State<PessoasListView> {
                   ],
                 ),
               ),
-              const Icon(Icons.chevron_right, color: Colors.grey),
+              if (minhaNota != null)
+                Column(
+                  children: [
+                    Text(
+                      '$minhaNota',
+                      style: theme.textTheme.titleLarge?.copyWith(
+                        color: colorScheme.primary,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    Text('Nível Lenda', style: theme.textTheme.labelSmall),
+                  ],
+                )
+              else
+                Icon(Icons.chevron_right, color: colorScheme.outline),
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _Etiqueta extends StatelessWidget {
+  const _Etiqueta({
+    required this.texto,
+    required this.fundo,
+    required this.cor,
+  });
+
+  final String texto;
+  final Color fundo;
+  final Color cor;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+      decoration: BoxDecoration(
+        color: fundo,
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: Text(
+        texto,
+        style: Theme.of(context).textTheme.labelSmall
+            ?.copyWith(color: cor, fontWeight: FontWeight.bold),
       ),
     );
   }

@@ -11,11 +11,7 @@ class TemaFacade {
   final ObterTemaSalvoUseCase obterTemaSalvoUseCase;
   final SalvarTemaUseCase salvarTemaUseCase;
 
-  Future<Result<bool?>> obterTemaSalvo() {
-    return obterTemaSalvoUseCase();
-  }
+  Future<Result<bool?>> obterTemaSalvo() => obterTemaSalvoUseCase();
 
-  Future<Result<void>> salvarTema(bool isDark) {
-    return salvarTemaUseCase(isDark);
-  }
+  Future<Result<void>> alterarTema(bool escuro) => salvarTemaUseCase(escuro);
 }

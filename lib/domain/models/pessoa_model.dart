@@ -35,6 +35,34 @@ class PessoaModel {
   static bool isTurmaValida(int turma) =>
       turma >= turmaAnoMinimo && turma <= turmaAnoMaximo;
 
+  /// Retorna a mensagem do primeiro problema encontrado ou null se estiver ok.
+  String? validar() {
+    if (nome.trim().length < 2) {
+      return 'O nome deve ter no mínimo 2 caracteres.';
+    }
+    if (apelido.trim().isEmpty) {
+      return 'Informe o apelido da pessoa.';
+    }
+    if (!isCursoValido(curso)) {
+      return 'Curso inválido. Escolha um dos cursos: ${cursosValidos.join(", ")}.';
+    }
+    if (!isTurmaValida(turma)) {
+      return 'Turma/Ano deve estar entre $turmaAnoMinimo e $turmaAnoMaximo.';
+    }
+    if (dataNascimento.isAfter(DateTime.now())) {
+      return 'A data de nascimento não pode estar no futuro.';
+    }
+    return null;
+  }
+
+  PessoaModel normalizada() {
+    return copyWith(
+      nome: nome.trim(),
+      apelido: apelido.trim(),
+      curso: curso.trim().toUpperCase(),
+    );
+  }
+
   PessoaModel copyWith({
     String? id,
     String? nome,
@@ -57,7 +85,6 @@ class PessoaModel {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'nome': nome,
       'apelido': apelido,
       'curso': curso,
@@ -67,17 +94,18 @@ class PessoaModel {
     };
   }
 
-  factory PessoaModel.fromMap(Map<String, dynamic> map) {
+  factory PessoaModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    final dataRaw = map['dataNascimento'];
+
     return PessoaModel(
-      id: map['id'] as String? ?? '',
+      id: id ?? map['id'] as String? ?? '',
       nome: map['nome'] as String? ?? '',
       apelido: map['apelido'] as String? ?? '',
       curso: map['curso'] as String? ?? '',
       turma: (map['turma'] as num?)?.toInt() ?? turmaAnoMinimo,
-      dataNascimento: map['dataNascimento'] != null
-          ? DateTime.tryParse(map['dataNascimento'] as String) ??
-                DateTime(2000, 1, 1)
-          : DateTime(2000, 1, 1),
+      dataNascimento: dataRaw is String
+          ? DateTime.tryParse(dataRaw) ?? DateTime(2000)
+          : DateTime(2000),
       criadoPor: map['criadoPor'] as String? ?? '',
     );
   }

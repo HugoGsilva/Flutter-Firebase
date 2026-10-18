@@ -12,6 +12,7 @@ class SobreView extends StatelessWidget {
 
     return Scaffold(
       body: SingleChildScrollView(
+        key: const PageStorageKey('sobre'),
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -79,7 +80,7 @@ class SobreView extends StatelessWidget {
                         ),
                         const SizedBox(width: 8),
                         Text(
-                          'Apresentação Oficial',
+                          'Sobre o App',
                           style: theme.textTheme.titleMedium?.copyWith(
                             fontWeight: FontWeight.bold,
                             color: colorScheme.primary,
@@ -101,6 +102,20 @@ class SobreView extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 16),
+            _buildSectionCard(
+              context,
+              icon: Icons.location_city_rounded,
+              title: 'Contexto: IFPR – Campus Paranaguá',
+              content: 'O app nasceu nos corredores do IFPR – Campus Paranaguá para registrar a convivência, a resenha e o caos controlado entre os estudantes. As pessoas cadastradas são avaliadas por critérios descontraídos de popularidade, e todos disputam um lugar no topo do Nível Lenda.',
+            ),
+            const SizedBox(height: 12),
+            _buildSectionCard(
+              context,
+              icon: Icons.star_rounded,
+              title: 'Como funcionam os critérios',
+              content: 'Cada pessoa é avaliada em 15 critérios, cada um com uma nota de 1 a 5 estrelas (Star Rating). O usuário autenticado avalia outras pessoas, nunca a si próprio: basta vincular o seu cadastro à sua conta com a opção "Esta pessoa sou eu".',
+            ),
+            const SizedBox(height: 12),
             _buildSectionCard(
               context,
               icon: Icons.auto_awesome,
@@ -126,9 +141,16 @@ class SobreView extends StatelessWidget {
               icon: Icons.cloud_done_outlined,
               title: 'Armazenamento & Autenticação',
               content:
-                  '• Firestore: Armazena coleções remotas de usuários, pessoas cadastradas e avaliações de modo multiusuário e em tempo real.\n\n'
+                  '• Firestore: Armazena coleções remotas de usuários, pessoas cadastradas e avaliações de modo multiusuário. Assim os dados ficam disponíveis em qualquer dispositivo, bastando entrar com a mesma conta.\n\n'
                   '• Firebase Authentication: Gerencia o acesso com segurança através de login por E-mail/Senha e autenticação integrada via Google.\n\n'
-                  '• SharedPreferences: Utilizado de maneira complementar estritamente para preferências locais de tema (claro/escuro) e cache auxiliar de sessão.',
+                  '• SharedPreferences: Utilizado de maneira complementar estritamente para preferências locais de tema (claro/escuro) e cache auxiliar de sessão. Senhas nunca são guardadas no aparelho.',
+            ),
+            const SizedBox(height: 12),
+            _buildSectionCard(
+              context,
+              icon: Icons.contrast_rounded,
+              title: 'Tema claro e escuro',
+              content: 'Use o botão de sol/lua na barra superior para alternar entre o tema claro e o escuro a qualquer momento. A escolha fica salva no aparelho e é aplicada automaticamente na próxima vez que o app for aberto.',
             ),
             const SizedBox(height: 12),
             Card(

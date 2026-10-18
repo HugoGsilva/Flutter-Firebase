@@ -21,23 +21,21 @@ class PessoaFacade {
   final ListarPessoasUseCase listarPessoasUseCase;
   final BuscarPessoaPorIdUseCase buscarPessoaPorIdUseCase;
 
-  Future<Result<void>> cadastrar(PessoaModel pessoa) {
+  Future<Result<PessoaModel>> cadastrar(PessoaModel pessoa) {
     return cadastrarPessoaUseCase(pessoa);
   }
 
-  Future<Result<void>> atualizar(PessoaModel pessoa) {
+  Future<Result<PessoaModel?>> buscar(String id) {
+    return buscarPessoaPorIdUseCase(id);
+  }
+
+  Future<Result<List<PessoaModel>>> listar() => listarPessoasUseCase();
+
+  Future<Result<PessoaModel>> alterar(PessoaModel pessoa) {
     return atualizarPessoaUseCase(pessoa);
   }
 
   Future<Result<void>> remover(String id, {required bool confirmado}) {
     return removerPessoaUseCase(id, confirmado: confirmado);
-  }
-
-  Future<Result<List<PessoaModel>>> listarTodas() {
-    return listarPessoasUseCase();
-  }
-
-  Future<Result<PessoaModel?>> buscarPorId(String id) {
-    return buscarPessoaPorIdUseCase(id);
   }
 }

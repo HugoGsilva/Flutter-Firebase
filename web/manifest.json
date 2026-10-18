@@ -1,11 +1,11 @@
 {
-    "name": "piramid_game",
-    "short_name": "piramid_game",
+    "name": "PiramidGame IFPR-Pgua",
+    "short_name": "PiramidGame",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",
     "theme_color": "#0175C2",
-    "description": "A new Flutter project.",
+    "description": "Ranking de popularidade do IFPR - Campus Paranaguá.",
     "orientation": "portrait-primary",
     "prefer_related_applications": false,
     "icons": [

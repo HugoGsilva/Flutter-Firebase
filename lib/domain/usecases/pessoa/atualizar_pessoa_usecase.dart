@@ -1,3 +1,4 @@
+import '../../../core/result/app_exception.dart';
 import '../../../core/result/result.dart';
 import '../../models/pessoa_model.dart';
 import '../../repositories/pessoa_repository.dart';
@@ -7,37 +8,25 @@ class AtualizarPessoaUseCase {
 
   final PessoaRepository _repository;
 
-  Future<Result<void>> call(PessoaModel pessoa) async {
-    final nomeLimpo = pessoa.nome.trim();
-    if (nomeLimpo.isEmpty) {
-      return const Failure(FormatException('O nome não pode ser vazio.'));
+  Future<Result<PessoaModel>> call(PessoaModel pessoa) async {
+    if (pessoa.id.trim().isEmpty) {
+      return const Failure(FormatException('Pessoa sem identificador.'));
     }
 
-    if (!PessoaModel.isCursoValido(pessoa.curso)) {
-      return Failure(
-        FormatException(
-          'Curso inválido. Escolha um dos cursos: ${PessoaModel.cursosValidos.join(", ")}.',
-        ),
-      );
-    }
-
-    if (!PessoaModel.isTurmaValida(pessoa.turma)) {
-      return Failure(
-        FormatException(
-          'Turma/Ano deve estar entre ${PessoaModel.turmaAnoMinimo} e ${PessoaModel.turmaAnoMaximo}.',
-        ),
-      );
-    }
+    final erro = pessoa.validar();
+    if (erro != null) return Failure(FormatException(erro));
 
     try {
-      await _repository.atualizarPessoa(
-        pessoa.copyWith(
-          nome: nomeLimpo,
-          apelido: pessoa.apelido.trim(),
-          curso: pessoa.curso.toUpperCase().trim(),
-        ),
+      final atual = await _repository.buscarPorId(pessoa.id);
+      if (atual == null) {
+        return const Failure(AppException('Pessoa não encontrada.'));
+      }
+
+      final atualizada = pessoa.normalizada().copyWith(
+        criadoPor: atual.criadoPor,
       );
-      return const Success(null);
+      await _repository.atualizarPessoa(atualizada);
+      return Success(atualizada);
     } on Exception catch (e) {
       return Failure(e);
     }

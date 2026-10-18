@@ -4,11 +4,12 @@ import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
+import '../../../core/theme/app_theme.dart';
 import '../../../domain/models/criterios_avaliacao.dart';
 import '../../../domain/models/pessoa_model.dart';
-import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/avaliacao_viewmodel.dart';
 import '../../viewmodels/pessoa_viewmodel.dart';
+import '../widgets/feedback.dart';
 import 'widgets/star_rating.dart';
 
 class AvaliacaoScreen extends StatefulWidget {
@@ -22,79 +23,43 @@ class AvaliacaoScreen extends StatefulWidget {
 }
 
 class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
-  late final AvaliacaoViewModel _avaliacaoViewModel;
-  late final AuthViewModel _authViewModel;
-  late final PessoaViewModel _pessoaViewModel;
-  PessoaModel? _pessoa;
+  final _avaliacaoViewModel = sl<AvaliacaoViewModel>();
+  final _pessoaViewModel = sl<PessoaViewModel>();
 
   @override
   void initState() {
     super.initState();
-    _avaliacaoViewModel = sl<AvaliacaoViewModel>();
-    _authViewModel = sl<AuthViewModel>();
-    _pessoaViewModel = sl<PessoaViewModel>();
-
-    _carregarPessoaEAvaliacao();
-  }
-
-  void _carregarPessoaEAvaliacao() {
-    _pessoa = widget.pessoa;
-    if (_pessoa == null) {
-      final lista = _pessoaViewModel.pessoas.value;
-      _pessoa = lista.where((p) => p.id == widget.pessoaId).firstOrNull;
-    }
-
-    final usuarioUid = _authViewModel.currentUser.value?.uid ?? '';
-    if (usuarioUid.isNotEmpty) {
-      _avaliacaoViewModel.carregarAvaliacaoCommand(widget.pessoaId, usuarioUid);
-    }
-  }
-
-  bool get _isAutoavaliacao {
-    final usuarioUid = _authViewModel.currentUser.value?.uid ?? '';
-    if (usuarioUid.isEmpty) return false;
-    final criadorUid = _pessoa?.criadoPor ?? '';
-    return usuarioUid == criadorUid || usuarioUid == widget.pessoaId;
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      if (_pessoaViewModel.pessoaPorId(widget.pessoaId) == null &&
+          widget.pessoa == null) {
+        _pessoaViewModel.buscarPessoaCommand(widget.pessoaId);
+      }
+      await _avaliacaoViewModel.carregarAvaliacaoCommand(widget.pessoaId);
+      final erro = _avaliacaoViewModel.errorMessage.value;
+      if (erro != null && mounted) {
+        mostrarErro(context, erro);
+        _avaliacaoViewModel.limparErro();
+      }
+    });
   }
 
   Future<void> _salvar() async {
-    final usuarioUid = _authViewModel.currentUser.value?.uid ?? '';
-    if (usuarioUid.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Você precisa estar autenticado para avaliar.'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    final result = await _avaliacaoViewModel.salvarAvaliacaoCommand(
+    final result = await _avaliacaoViewModel.avaliarPessoaCommand(
       widget.pessoaId,
-      usuarioUid,
-      _pessoa?.criadoPor,
     );
-
     if (!mounted) return;
 
-    if (result case Success()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Avaliação salva com sucesso!'),
-          behavior: SnackBarBehavior.floating,
-        ),
+    if (result case Success(data: final avaliacao)) {
+      mostrarSucesso(
+        context,
+        'Avaliação salva! Nível Lenda: ${avaliacao.pontuacaoTotal} pontos.',
       );
       context.pop();
-    } else if (result case Failure()) {
-      final msg =
-          _avaliacaoViewModel.errorMessage.value ??
-          'Não foi possível salvar a avaliação.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+    } else {
+      mostrarErro(
+        context,
+        _avaliacaoViewModel.errorMessage.value ??
+            'Não foi possível salvar a avaliação.',
       );
       _avaliacaoViewModel.limparErro();
     }
@@ -102,35 +67,36 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final nomePessoa = _pessoa?.nome ?? 'Colega do IFPR';
-    final apelidoPessoa = _pessoa?.apelido ?? '';
+    return SignalBuilder(
+      builder: (context) {
+        final pessoa =
+            _pessoaViewModel.pessoaPorId(widget.pessoaId) ?? widget.pessoa;
+        final carregando =
+            _avaliacaoViewModel.carregarAvaliacaoCommand.runningSignal.value;
+        final salvando =
+            _avaliacaoViewModel.avaliarPessoaCommand.runningSignal.value;
+        final pontuacao = _avaliacaoViewModel.pontuacaoTotal.value;
+        final notas = _avaliacaoViewModel.notas.value;
+        final jaAvaliou = _avaliacaoViewModel.avaliacaoExistente.value != null;
+        final auto = _avaliacaoViewModel.isAutoavaliacao.value;
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          apelidoPessoa.isNotEmpty
-              ? 'Avaliar $apelidoPessoa'
-              : 'Avaliar Pessoa',
-        ),
-      ),
-      body: _isAutoavaliacao
-          ? _buildBloqueioAutoavaliacao(context)
-          : SignalBuilder(
-              builder: (context) {
-                final isLoading = _avaliacaoViewModel.isLoading.value;
-                final pontuacao = _avaliacaoViewModel.pontuacaoTotal.value;
-                final notas = _avaliacaoViewModel.notas.value;
-                final jaAvaliou =
-                    _avaliacaoViewModel.avaliacaoExistente.value != null;
+        final apelido = pessoa?.apelido ?? '';
 
-                return Column(
+        return Scaffold(
+          appBar: AppBar(
+            title: Text(apelido.isNotEmpty ? 'Avaliar $apelido' : 'Avaliar'),
+          ),
+          body: carregando
+              ? const Center(child: CircularProgressIndicator())
+              : auto
+              ? const _BloqueioAutoavaliacao()
+              : Column(
                   children: [
-                    _buildNivelLendaHeader(
-                      context,
-                      nomePessoa,
-                      apelidoPessoa,
-                      pontuacao,
-                      jaAvaliou,
+                    _NivelLendaHeader(
+                      nome: pessoa?.nome ?? '',
+                      apelido: apelido,
+                      pontuacao: pontuacao,
+                      jaAvaliou: jaAvaliou,
                     ),
                     Expanded(
                       child: ListView.separated(
@@ -142,32 +108,68 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
                         separatorBuilder: (_, _) => const SizedBox(height: 12),
                         itemBuilder: (context, index) {
                           final criterio = CriterioAvaliacao.values[index];
-                          final notaAtual = notas[criterio.id] ?? 3;
-
-                          return _buildCriterioCard(
-                            context,
-                            criterio,
-                            notaAtual,
-                            isLoading,
+                          return _CriterioCard(
+                            numero: index + 1,
+                            criterio: criterio,
+                            nota:
+                                notas[criterio.id] ??
+                                AvaliacaoViewModel.notaInicial,
+                            onChanged: salvando
+                                ? null
+                                : (nota) => _avaliacaoViewModel.definirNota(
+                                    criterio,
+                                    nota,
+                                  ),
                           );
                         },
                       ),
                     ),
-                    _buildFooterButton(context, isLoading, jaAvaliou),
+                    SafeArea(
+                      top: false,
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                        child: SizedBox(
+                          width: double.infinity,
+                          child: FilledButton.icon(
+                            key: const Key('avaliacao_salvar'),
+                            onPressed: salvando ? null : _salvar,
+                            icon: salvando
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                    ),
+                                  )
+                                : const Icon(Icons.check_circle_outline),
+                            label: Text(
+                              jaAvaliou
+                                  ? 'Atualizar Avaliação'
+                                  : 'Salvar Avaliação',
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
                   ],
-                );
-              },
-            ),
+                ),
+        );
+      },
     );
   }
+}
 
-  Widget _buildBloqueioAutoavaliacao(BuildContext context) {
+class _BloqueioAutoavaliacao extends StatelessWidget {
+  const _BloqueioAutoavaliacao();
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(28.0),
+        padding: const EdgeInsets.all(28),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
@@ -185,7 +187,7 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
             ),
             const SizedBox(height: 20),
             Text(
-              'Autoavaliação Bloqueada',
+              'Autoavaliação bloqueada',
               style: theme.textTheme.headlineSmall?.copyWith(
                 fontWeight: FontWeight.bold,
                 color: colorScheme.error,
@@ -194,7 +196,7 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
             ),
             const SizedBox(height: 12),
             Text(
-              'Pelas regras do PiramidGame, um usuário não pode avaliar o próprio perfil nem cadastros criados por si mesmo.',
+              'Esta pessoa está vinculada à sua conta. Pelas regras do PiramidGame, o usuário autenticado não pode avaliar a si próprio.',
               style: theme.textTheme.bodyMedium?.copyWith(
                 color: colorScheme.onSurfaceVariant,
               ),
@@ -211,28 +213,35 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
       ),
     );
   }
+}
 
-  Widget _buildNivelLendaHeader(
-    BuildContext context,
-    String nome,
-    String apelido,
-    int pontuacao,
-    bool jaAvaliou,
-  ) {
+class _NivelLendaHeader extends StatelessWidget {
+  const _NivelLendaHeader({
+    required this.nome,
+    required this.apelido,
+    required this.pontuacao,
+    required this.jaAvaliou,
+  });
+
+  final String nome;
+  final String apelido;
+  final int pontuacao;
+  final bool jaAvaliou;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
-    final progress = (pontuacao - 15) / (75 - 15);
+    const minimo = CriterioAvaliacao.pontuacaoMinima;
+    const maximo = CriterioAvaliacao.pontuacaoMaxima;
+    final progresso = (pontuacao - minimo) / (maximo - minimo);
 
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
       decoration: BoxDecoration(
         color: colorScheme.primaryContainer.withValues(alpha: 0.5),
-        border: Border(
-          bottom: BorderSide(
-            color: colorScheme.outlineVariant.withValues(alpha: 0.5),
-          ),
-        ),
+        border: Border(bottom: BorderSide(color: colorScheme.outlineVariant)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -251,13 +260,17 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                     ),
-                    if (apelido.isNotEmpty)
-                      Text(
-                        '@$apelido',
-                        style: theme.textTheme.bodySmall?.copyWith(
-                          color: colorScheme.onSurfaceVariant,
-                        ),
+                    Text(
+                      jaAvaliou
+                          ? 'Alterando sua avaliação anterior'
+                          : 'Dê de 1 a 5 estrelas em cada critério',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: jaAvaliou
+                            ? colorScheme.primary
+                            : colorScheme.onSurfaceVariant,
+                        fontWeight: jaAvaliou ? FontWeight.bold : null,
                       ),
+                    ),
                   ],
                 ),
               ),
@@ -269,18 +282,12 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
                 decoration: BoxDecoration(
                   color: colorScheme.primary,
                   borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: colorScheme.primary.withValues(alpha: 0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
                 ),
                 child: Column(
                   children: [
                     Text(
                       '$pontuacao',
+                      key: const Key('avaliacao_pontuacao'),
                       style: theme.textTheme.titleLarge?.copyWith(
                         color: colorScheme.onPrimary,
                         fontWeight: FontWeight.w900,
@@ -289,7 +296,7 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
                     Text(
                       'Nível Lenda',
                       style: theme.textTheme.labelSmall?.copyWith(
-                        color: colorScheme.onPrimary.withValues(alpha: 0.85),
+                        color: colorScheme.onPrimary,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
@@ -302,11 +309,11 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
-              value: progress.clamp(0.0, 1.0),
+              value: progresso.clamp(0.0, 1.0),
               minHeight: 8,
               backgroundColor: colorScheme.surfaceContainerHighest,
               valueColor: AlwaysStoppedAnimation<Color>(
-                pontuacao >= 60 ? Colors.amber.shade700 : colorScheme.primary,
+                pontuacao >= 60 ? AppColors.douradoLenda : colorScheme.primary,
               ),
             ),
           ),
@@ -314,55 +321,37 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Mínimo: 15 pts',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 11,
-                ),
-              ),
-              if (jaAvaliou)
-                Text(
-                  'Modificando avaliação anterior',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: colorScheme.primary,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 11,
-                  ),
-                ),
-              Text(
-                'Máximo: 75 pts',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: colorScheme.onSurfaceVariant,
-                  fontSize: 11,
-                ),
-              ),
+              Text('Mínimo: $minimo pts', style: theme.textTheme.labelSmall),
+              Text('Máximo: $maximo pts', style: theme.textTheme.labelSmall),
             ],
           ),
         ],
       ),
     );
   }
+}
 
-  Widget _buildCriterioCard(
-    BuildContext context,
-    CriterioAvaliacao criterio,
-    int notaAtual,
-    bool isLoading,
-  ) {
+class _CriterioCard extends StatelessWidget {
+  const _CriterioCard({
+    required this.numero,
+    required this.criterio,
+    required this.nota,
+    required this.onChanged,
+  });
+
+  final int numero;
+  final CriterioAvaliacao criterio;
+  final int nota;
+  final ValueChanged<int>? onChanged;
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final colorScheme = theme.colorScheme;
 
     return Card(
-      elevation: 0,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(12),
-        side: BorderSide(
-          color: colorScheme.outlineVariant.withValues(alpha: 0.6),
-        ),
-      ),
       child: Padding(
-        padding: const EdgeInsets.all(14.0),
+        padding: const EdgeInsets.all(14),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -370,27 +359,17 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
               children: [
                 Expanded(
                   child: Text(
-                    criterio.nome,
+                    '$numero. ${criterio.nome}',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 2,
-                  ),
-                  decoration: BoxDecoration(
-                    color: colorScheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Text(
-                    '$notaAtual / 5',
-                    style: theme.textTheme.labelMedium?.copyWith(
-                      fontWeight: FontWeight.bold,
-                      color: colorScheme.primary,
-                    ),
+                Text(
+                  '$nota / 5',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.bold,
+                    color: colorScheme.primary,
                   ),
                 ),
               ],
@@ -405,62 +384,13 @@ class _AvaliacaoScreenState extends State<AvaliacaoScreen> {
             const SizedBox(height: 10),
             Center(
               child: StarRating(
-                rating: notaAtual,
+                key: Key('estrelas_${criterio.id}'),
+                rating: nota,
                 starSize: 34,
-                onRatingChanged: isLoading
-                    ? null
-                    : (novaNota) {
-                        _avaliacaoViewModel.definirNota(criterio, novaNota);
-                      },
+                onRatingChanged: onChanged,
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildFooterButton(
-    BuildContext context,
-    bool isLoading,
-    bool jaAvaliou,
-  ) {
-    return SafeArea(
-      top: false,
-      child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-        decoration: BoxDecoration(
-          color: Theme.of(context).colorScheme.surface,
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.05),
-              blurRadius: 8,
-              offset: const Offset(0, -2),
-            ),
-          ],
-        ),
-        child: SizedBox(
-          width: double.infinity,
-          child: FilledButton.icon(
-            onPressed: isLoading ? null : _salvar,
-            style: FilledButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 14),
-            ),
-            icon: isLoading
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                    ),
-                  )
-                : const Icon(Icons.check_circle_outline),
-            label: Text(
-              jaAvaliou ? 'Atualizar Avaliação' : 'Salvar Avaliação',
-              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-            ),
-          ),
         ),
       ),
     );

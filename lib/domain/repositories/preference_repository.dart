@@ -1,7 +1,11 @@
+import '../models/usuario_model.dart';
+
 abstract interface class PreferenceRepository {
   Future<void> salvarTemaEscuro(bool isDark);
   Future<bool?> obterTemaEscuro();
-  Future<void> salvarUltimoUid(String uid);
-  Future<String?> obterUltimoUid();
+
+  /// Cache simples do usuário autenticado (nunca inclui a senha).
+  Future<void> salvarUsuarioEmCache(UsuarioModel usuario);
+  Future<UsuarioModel?> obterUsuarioEmCache();
   Future<void> limparSessao();
 }

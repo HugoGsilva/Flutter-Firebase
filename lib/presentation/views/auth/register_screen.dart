@@ -4,7 +4,9 @@ import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../core/di/injection.dart';
 import '../../../core/result/result.dart';
+import '../../../core/router/app_router.dart';
 import '../../viewmodels/auth_viewmodel.dart';
+import '../widgets/feedback.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -46,39 +48,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final nome = _nomeController.text.trim();
     final email = _emailController.text.trim();
     final senha = _senhaController.text;
-    final confirmacao = _confirmacaoSenhaController.text;
 
-    if (senha != confirmacao) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Text('As senhas não coincidem.'),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      return;
-    }
-
-    final result = await _authViewModel.cadastroCommand(email, senha, nome);
+    final result = await _authViewModel.cadastroCommand(nome, email, senha);
     if (!mounted) return;
 
     if (result case Success()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Conta criada com sucesso! Bem-vindo, $nome!'),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      context.go('/home');
-    } else if (result case Failure()) {
-      final msg =
-          _authViewModel.errorMessage.value ?? 'Erro ao cadastrar usuário.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+      mostrarSucesso(context, 'Conta criada com sucesso! Bem-vindo(a), $nome!');
+      context.go(AppRoutes.home);
+    } else {
+      mostrarErro(
+        context,
+        _authViewModel.errorMessage.value ?? 'Erro ao cadastrar usuário.',
       );
       _authViewModel.limparErro();
     }
@@ -127,7 +107,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           decoration: const InputDecoration(
                             labelText: 'Nome completo',
                             prefixIcon: Icon(Icons.person_outline),
-                            border: OutlineInputBorder(),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -149,7 +128,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             labelText: 'E-mail',
                             hintText: 'seu.email@exemplo.com',
                             prefixIcon: Icon(Icons.email_outlined),
-                            border: OutlineInputBorder(),
                           ),
                           validator: (value) {
                             if (value == null || value.trim().isEmpty) {
@@ -169,7 +147,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           decoration: InputDecoration(
                             labelText: 'Senha',
                             prefixIcon: const Icon(Icons.lock_outline),
-                            border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscurePassword
@@ -201,7 +178,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           decoration: InputDecoration(
                             labelText: 'Confirmação de senha',
                             prefixIcon: const Icon(Icons.lock_reset_outlined),
-                            border: const OutlineInputBorder(),
                             suffixIcon: IconButton(
                               icon: Icon(
                                 _obscureConfirmPassword
@@ -229,27 +205,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 28),
                         FilledButton(
                           onPressed: loading ? null : _handleCadastro,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
                           child: loading
                               ? const SizedBox(
                                   height: 20,
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
                                   ),
                                 )
-                              : const Text(
-                                  'Cadastrar',
-                                  style: TextStyle(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
+                              : const Text('Cadastrar'),
                         ),
                       ],
                     );

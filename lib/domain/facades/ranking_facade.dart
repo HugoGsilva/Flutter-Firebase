@@ -12,13 +12,11 @@ class RankingFacade {
   final CalcularRankingPessoalUseCase calcularRankingPessoalUseCase;
   final CalcularRankingGlobalUseCase calcularRankingGlobalUseCase;
 
-  Future<Result<List<RankingItemModel>>> obterRankingPessoal(
-    String avaliadorUid,
-  ) {
-    return calcularRankingPessoalUseCase(avaliadorUid);
+  Future<Result<List<RankingItemModel>>> gerarRankingPessoal() {
+    return calcularRankingPessoalUseCase();
   }
 
-  Future<Result<List<RankingItemModel>>> obterRankingGlobal() {
+  Future<Result<List<RankingItemModel>>> gerarRankingGlobal() {
     return calcularRankingGlobalUseCase();
   }
 }

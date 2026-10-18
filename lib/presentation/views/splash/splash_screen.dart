@@ -1,51 +1,41 @@
-import 'dart:async';
-
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../../core/di/injection.dart';
+import '../../../core/router/app_router.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
+
+  static const Duration duracaoMinima = Duration(milliseconds: 1500);
 
   @override
   State<SplashScreen> createState() => _SplashScreenState();
 }
 
 class _SplashScreenState extends State<SplashScreen> {
-  Timer? _timer;
+  late final AuthViewModel _authViewModel;
 
   @override
   void initState() {
     super.initState();
-    _timer = Timer(const Duration(milliseconds: 1800), () {
-      if (!mounted) return;
-      _redirecionar();
-    });
+    _authViewModel = sl<AuthViewModel>();
+    _verificarAutenticacao();
   }
 
-  @override
-  void dispose() {
-    _timer?.cancel();
-    super.dispose();
-  }
-
-  void _redirecionar() {
+  Future<void> _verificarAutenticacao() async {
+    await _authViewModel.carregarCache();
+    await Future.wait([
+      _authViewModel.verificarSessaoCommand(),
+      Future<void>.delayed(SplashScreen.duracaoMinima),
+    ]);
     if (!mounted) return;
-    try {
-      if (sl.isRegistered<AuthViewModel>()) {
-        final authViewModel = sl<AuthViewModel>();
-        authViewModel.verificarSessao();
-        if (authViewModel.isAuthenticated.value) {
-          context.go('/home');
-          return;
-        }
-      }
-      context.go('/login');
-    } catch (_) {
-      // Ignora se não houver GoRouter no contexto (ex: teste de widget isolado)
-    }
+
+    context.go(
+      _authViewModel.isAuthenticated.value ? AppRoutes.home : AppRoutes.login,
+    );
   }
 
   @override
@@ -69,7 +59,6 @@ class _SplashScreenState extends State<SplashScreen> {
         ),
         child: SafeArea(
           child: Column(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Spacer(),
               Container(
@@ -111,7 +100,7 @@ class _SplashScreenState extends State<SplashScreen> {
                   borderRadius: BorderRadius.circular(20),
                 ),
                 child: Text(
-                  'IFPR - Campus Paranaguá',
+                  'IFPR – Campus Paranaguá',
                   style: theme.textTheme.labelLarge?.copyWith(
                     color: colorScheme.primary,
                     fontWeight: FontWeight.w600,
@@ -122,7 +111,7 @@ class _SplashScreenState extends State<SplashScreen> {
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 32),
                 child: Text(
-                  'Ranking de Popularidade e Nível Lenda no Campus',
+                  'Quem domina o Nível Lenda do campus?',
                   style: theme.textTheme.bodyMedium?.copyWith(
                     color: colorScheme.onSurfaceVariant,
                   ),
@@ -130,15 +119,24 @@ class _SplashScreenState extends State<SplashScreen> {
                 ),
               ),
               const Spacer(),
-              SizedBox(
+              const SizedBox(
                 width: 32,
                 height: 32,
-                child: CircularProgressIndicator(
-                  strokeWidth: 3,
-                  valueColor: AlwaysStoppedAnimation<Color>(
-                    colorScheme.primary,
-                  ),
-                ),
+                child: CircularProgressIndicator(strokeWidth: 3),
+              ),
+              const SizedBox(height: 12),
+              SignalBuilder(
+                builder: (context) {
+                  final nome = _authViewModel.nomeEmCache.value;
+                  return Text(
+                    nome != null && nome.isNotEmpty
+                        ? 'Bem-vindo(a) de volta, ${nome.split(' ').first}!'
+                        : 'Verificando sua sessão...',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: colorScheme.onSurfaceVariant,
+                    ),
+                  );
+                },
               ),
               const SizedBox(height: 36),
             ],

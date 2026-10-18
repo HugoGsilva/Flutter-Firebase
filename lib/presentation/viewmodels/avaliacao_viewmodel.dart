@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../core/command/command.dart';
@@ -6,134 +5,101 @@ import '../../core/result/result.dart';
 import '../../domain/facades/avaliacao_facade.dart';
 import '../../domain/models/avaliacao_model.dart';
 import '../../domain/models/criterios_avaliacao.dart';
+import 'base_viewmodel.dart';
 
-class AvaliacaoViewModel extends ChangeNotifier {
+class AvaliacaoViewModel extends BaseViewModel {
   AvaliacaoViewModel(this._avaliacaoFacade) {
-    notas = signal<Map<String, int>>(criarNotasPadrao(3));
-    pontuacaoTotal = computed(() {
-      return CriterioAvaliacao.calcularPontuacaoTotal(notas.value);
-    });
-    avaliacaoExistente = signal<AvaliacaoModel?>(null);
-    isLoading = signal<bool>(false);
-    errorMessage = signal<String?>(null);
-
-    carregarAvaliacaoCommand = Command2<AvaliacaoModel?, String, String>(
+    carregarAvaliacaoCommand = Command1<AvaliacaoModel?, String>(
       _carregarAvaliacao,
     );
-    salvarAvaliacaoCommand = Command3<void, String, String, String?>(
-      _salvarAvaliacao,
+    avaliarPessoaCommand = Command1<AvaliacaoModel, String>(_avaliarPessoa);
+    carregarMinhasAvaliacoesCommand = Command0<List<AvaliacaoModel>>(
+      _carregarMinhasAvaliacoes,
     );
   }
+
+  static const int notaInicial = 3;
 
   final AvaliacaoFacade _avaliacaoFacade;
 
-  late final Signal<Map<String, int>> notas;
-  late final Computed<int> pontuacaoTotal;
-  late final Signal<AvaliacaoModel?> avaliacaoExistente;
-  late final Signal<bool> isLoading;
-  late final Signal<String?> errorMessage;
+  final notas = signal<Map<String, int>>(criarNotasPadrao());
+  late final pontuacaoTotal = computed(
+    () => CriterioAvaliacao.calcularPontuacaoTotal(notas.value),
+  );
+  final avaliacaoExistente = signal<AvaliacaoModel?>(null);
+  final isAutoavaliacao = signal<bool>(false);
 
-  late final Command2<AvaliacaoModel?, String, String> carregarAvaliacaoCommand;
-  late final Command3<void, String, String, String?> salvarAvaliacaoCommand;
+  /// Avaliações do usuário autenticado indexadas pelo id da pessoa.
+  final minhasAvaliacoes = signal<Map<String, AvaliacaoModel>>({});
 
-  static Map<String, int> criarNotasPadrao([int valorPadrao = 3]) {
-    return {
-      for (final criterio in CriterioAvaliacao.values) criterio.id: valorPadrao,
-    };
+  late final Command1<AvaliacaoModel?, String> carregarAvaliacaoCommand;
+  late final Command1<AvaliacaoModel, String> avaliarPessoaCommand;
+  late final Command0<List<AvaliacaoModel>> carregarMinhasAvaliacoesCommand;
+
+  static Map<String, int> criarNotasPadrao([int valor = notaInicial]) {
+    return {for (final c in CriterioAvaliacao.values) c.id: valor};
   }
 
-  void definirNota(dynamic criterio, int nota) {
-    final String id = criterio is CriterioAvaliacao
-        ? criterio.id
-        : criterio.toString();
-    final novoMapa = Map<String, int>.from(notas.value);
-    novoMapa[id] = nota;
-    notas.value = novoMapa;
-    notifyListeners();
+  void definirNota(CriterioAvaliacao criterio, int nota) {
+    if (!CriterioAvaliacao.isNotaValida(nota)) return;
+    notas.value = {...notas.value, criterio.id: nota};
   }
 
-  void resetarNotas([int valorPadrao = 3]) {
-    notas.value = criarNotasPadrao(valorPadrao);
+  Future<Result<AvaliacaoModel?>> _carregarAvaliacao(String pessoaId) {
+    notas.value = criarNotasPadrao();
     avaliacaoExistente.value = null;
-    errorMessage.value = null;
-    notifyListeners();
+    isAutoavaliacao.value = false;
+
+    return executar(() async {
+      final auto = await _avaliacaoFacade.verificarAutoavaliacao(pessoaId);
+      if (auto case Failure(error: final erro)) return Failure(erro);
+      isAutoavaliacao.value = auto.dataOrNull ?? false;
+      if (isAutoavaliacao.value) return const Success(null);
+
+      return _avaliacaoFacade.consultarAvaliacao(pessoaId);
+    }, aoConcluir: _aplicarAvaliacao);
   }
 
-  Future<Result<AvaliacaoModel?>> _carregarAvaliacao(
-    String pessoaId,
-    String usuarioUid,
-  ) async {
-    isLoading.value = true;
-    errorMessage.value = null;
-    notifyListeners();
-    try {
-      final res = await _avaliacaoFacade.buscarAvaliacao(
-        avaliadorUid: usuarioUid,
-        pessoaId: pessoaId,
-      );
-      if (res case Success(data: final avaliacao)) {
-        avaliacaoExistente.value = avaliacao;
-        if (avaliacao != null) {
-          notas.value = Map<String, int>.from(avaliacao.notas);
-        } else {
-          notas.value = criarNotasPadrao(3);
-        }
-        errorMessage.value = null;
-      } else if (res case Failure(error: final err)) {
-        errorMessage.value = _formatError(err);
-      }
-      return res;
-    } finally {
-      isLoading.value = false;
-      notifyListeners();
+  Future<Result<AvaliacaoModel>> _avaliarPessoa(String pessoaId) {
+    final notasAtuais = Map<String, int>.from(notas.value);
+    final jaAvaliou = avaliacaoExistente.value != null;
+
+    return executar(
+      () => jaAvaliou
+          ? _avaliacaoFacade.alterarAvaliacao(
+              pessoaId: pessoaId,
+              notas: notasAtuais,
+            )
+          : _avaliacaoFacade.avaliar(pessoaId: pessoaId, notas: notasAtuais),
+      aoConcluir: (avaliacao) {
+        _aplicarAvaliacao(avaliacao);
+        minhasAvaliacoes.value = {
+          ...minhasAvaliacoes.value,
+          pessoaId: avaliacao,
+        };
+      },
+    );
+  }
+
+  Future<Result<List<AvaliacaoModel>>> _carregarMinhasAvaliacoes() {
+    return executar(
+      _avaliacaoFacade.carregarAvaliacoes,
+      aoConcluir: (lista) =>
+          minhasAvaliacoes.value = {for (final a in lista) a.pessoaId: a},
+    );
+  }
+
+  void _aplicarAvaliacao(AvaliacaoModel? avaliacao) {
+    avaliacaoExistente.value = avaliacao;
+    if (avaliacao != null && avaliacao.notas.isNotEmpty) {
+      notas.value = {...criarNotasPadrao(), ...avaliacao.notas};
     }
   }
 
-  Future<Result<void>> _salvarAvaliacao(
-    String pessoaId,
-    String usuarioUid,
-    String? criadoPor,
-  ) async {
-    isLoading.value = true;
-    errorMessage.value = null;
-    notifyListeners();
-    try {
-      final novaAvaliacao = AvaliacaoModel(
-        id: AvaliacaoModel.gerarIdCanonico(usuarioUid, pessoaId),
-        avaliadorUid: usuarioUid,
-        pessoaId: pessoaId,
-        notas: Map<String, int>.from(notas.value),
-        pontuacaoTotal: pontuacaoTotal.value,
-        dataAvaliacao: DateTime.now(),
-      );
-
-      final res = await _avaliacaoFacade.salvarAvaliacao(
-        novaAvaliacao,
-        pessoaCriadorUid: criadoPor,
-      );
-
-      if (res case Success()) {
-        avaliacaoExistente.value = novaAvaliacao;
-        errorMessage.value = null;
-      } else if (res case Failure(error: final err)) {
-        errorMessage.value = _formatError(err);
-      }
-      return res;
-    } finally {
-      isLoading.value = false;
-      notifyListeners();
-    }
-  }
-
-  void limparErro() {
-    errorMessage.value = null;
-  }
-
-  String _formatError(Exception e) {
-    final msg = e.toString();
-    if (msg.startsWith('Exception: ')) {
-      return msg.substring(11);
-    }
-    return msg;
+  void limpar() {
+    notas.value = criarNotasPadrao();
+    avaliacaoExistente.value = null;
+    isAutoavaliacao.value = false;
+    minhasAvaliacoes.value = {};
   }
 }

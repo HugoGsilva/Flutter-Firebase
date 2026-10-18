@@ -1,4 +1,3 @@
-import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../domain/models/pessoa_model.dart';
@@ -10,80 +9,73 @@ import '../../presentation/views/home/home_screen.dart';
 import '../../presentation/views/pessoas/pessoa_detail_screen.dart';
 import '../../presentation/views/pessoas/pessoa_form_screen.dart';
 import '../../presentation/views/splash/splash_screen.dart';
-import '../di/injection.dart';
 
-class _RouterRefreshNotifier extends ChangeNotifier {
-  _RouterRefreshNotifier() {
-    if (sl.isRegistered<AuthViewModel>()) {
-      sl<AuthViewModel>().addListener(notifyListeners);
-    }
-  }
+class AppRoutes {
+  AppRoutes._();
+
+  static const splash = '/splash';
+  static const login = '/login';
+  static const cadastro = '/register';
+  static const home = '/home';
+  static const novaPessoa = '/pessoas/novo';
+
+  static String detalhes(String id) => '/pessoas/detalhes/$id';
+  static String editar(String id) => '/pessoas/editar/$id';
+  static String avaliar(String id) => '/pessoas/avaliar/$id';
 }
 
-final appRouter = GoRouter(
-  initialLocation: '/splash',
-  refreshListenable: _RouterRefreshNotifier(),
-  redirect: (BuildContext context, GoRouterState state) {
-    if (!sl.isRegistered<AuthViewModel>()) {
+/// Somente usuários autenticados acessam as rotas principais. A splash fica
+/// livre porque é nela que a sessão é verificada.
+GoRouter criarRouter(AuthViewModel authViewModel) {
+  return GoRouter(
+    initialLocation: AppRoutes.splash,
+    refreshListenable: authViewModel.isAuthenticated,
+    redirect: (context, state) {
+      final location = state.matchedLocation;
+      if (location == AppRoutes.splash) return null;
+
+      final autenticado = authViewModel.isAuthenticated.value;
+      final rotaPublica =
+          location == AppRoutes.login || location == AppRoutes.cadastro;
+
+      if (!autenticado && !rotaPublica) return AppRoutes.login;
+      if (autenticado && rotaPublica) return AppRoutes.home;
       return null;
-    }
-
-    final authViewModel = sl<AuthViewModel>();
-    final isAuthenticated = authViewModel.isAuthenticated.value;
-    final location = state.matchedLocation;
-
-    final isSplash = location == '/splash' || location == '/';
-    final isAuthRoute = location == '/login' || location == '/register';
-
-    if (isSplash) {
-      return null;
-    }
-
-    if (!isAuthenticated && !isAuthRoute) {
-      return '/login';
-    }
-
-    if (isAuthenticated && isAuthRoute) {
-      return '/home';
-    }
-
-    return null;
-  },
-  routes: [
-    GoRoute(path: '/', redirect: (context, state) => '/splash'),
-    GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
-    GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-    GoRoute(
-      path: '/register',
-      builder: (context, state) => const RegisterScreen(),
-    ),
-    GoRoute(path: '/home', builder: (context, state) => const HomeScreen()),
-    GoRoute(
-      path: '/pessoas/novo',
-      builder: (context, state) => const PessoaFormScreen(),
-    ),
-    GoRoute(
-      path: '/pessoas/editar/:id',
-      builder: (context, state) {
-        final pessoa = state.extra as PessoaModel?;
-        return PessoaFormScreen(pessoaParaEditar: pessoa);
-      },
-    ),
-    GoRoute(
-      path: '/pessoas/detalhes/:id',
-      builder: (context, state) {
-        final id = state.pathParameters['id'] ?? '';
-        final pessoa = state.extra as PessoaModel?;
-        return PessoaDetailScreen(pessoaId: id, pessoa: pessoa);
-      },
-    ),
-    GoRoute(
-      path: '/pessoas/avaliar/:id',
-      builder: (context, state) {
-        final id = state.pathParameters['id'] ?? '';
-        final pessoa = state.extra as PessoaModel?;
-        return AvaliacaoScreen(pessoaId: id, pessoa: pessoa);
-      },
-    ),
-  ],
-);
+    },
+    routes: [
+      GoRoute(path: '/', redirect: (_, _) => AppRoutes.splash),
+      GoRoute(path: AppRoutes.splash, builder: (_, _) => const SplashScreen()),
+      GoRoute(path: AppRoutes.login, builder: (_, _) => const LoginScreen()),
+      GoRoute(
+        path: AppRoutes.cadastro,
+        builder: (_, _) => const RegisterScreen(),
+      ),
+      GoRoute(path: AppRoutes.home, builder: (_, _) => const HomeScreen()),
+      GoRoute(
+        path: AppRoutes.novaPessoa,
+        builder: (_, _) => const PessoaFormScreen(),
+      ),
+      GoRoute(
+        path: '/pessoas/editar/:id',
+        builder: (_, state) => PessoaFormScreen(
+          pessoaId: state.pathParameters['id'],
+          pessoaParaEditar: state.extra as PessoaModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/pessoas/detalhes/:id',
+        builder: (_, state) => PessoaDetailScreen(
+          pessoaId: state.pathParameters['id'] ?? '',
+          pessoa: state.extra as PessoaModel?,
+        ),
+      ),
+      GoRoute(
+        path: '/pessoas/avaliar/:id',
+        builder: (_, state) => AvaliacaoScreen(
+          pessoaId: state.pathParameters['id'] ?? '',
+          pessoa: state.extra as PessoaModel?,
+        ),
+      ),
+    ],
+  );
+}

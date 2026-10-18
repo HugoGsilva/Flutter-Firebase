@@ -1,23 +1,27 @@
+import '../../../core/result/app_exception.dart';
 import '../../../core/result/result.dart';
+import '../../repositories/auth_repository.dart';
 
+/// Indica se a pessoa informada é a própria pessoa vinculada ao usuário
+/// autenticado.
 class VerificarAutoavaliacaoUseCase {
-  const VerificarAutoavaliacaoUseCase();
+  const VerificarAutoavaliacaoUseCase(this._authRepository);
 
-  Result<bool> call({
-    required String avaliadorUid,
-    required String pessoaCriadorUid,
-    String? pessoaId,
-  }) {
-    if (avaliadorUid.isEmpty) {
+  final AuthRepository _authRepository;
+
+  Future<Result<bool>> call(String pessoaId) async {
+    final atual = _authRepository.usuarioAtual;
+    if (atual == null) {
       return const Failure(
-        FormatException('Avaliador UID não pode ser vazio.'),
+        AppException('Você precisa estar autenticado para avaliar.'),
       );
     }
 
-    final isAutoavaliacao =
-        avaliadorUid == pessoaCriadorUid ||
-        (pessoaId != null && avaliadorUid == pessoaId);
-
-    return Success(isAutoavaliacao);
+    try {
+      final perfil = await _authRepository.buscarUsuario(atual.uid);
+      return Success(perfil?.pessoaId == pessoaId);
+    } on Exception catch (e) {
+      return Failure(e);
+    }
   }
 }

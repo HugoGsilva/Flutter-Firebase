@@ -17,6 +17,7 @@ class AvaliacaoModel {
   final int pontuacaoTotal;
   final DateTime dataAvaliacao;
 
+  /// Usuário + pessoa avaliada = uma avaliação.
   static String gerarIdCanonico(String avaliadorUid, String pessoaId) =>
       '${avaliadorUid}_$pessoaId';
 
@@ -40,36 +41,34 @@ class AvaliacaoModel {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'avaliadorUid': avaliadorUid,
       'pessoaId': pessoaId,
-      'notas': notas,
+      for (final criterio in CriterioAvaliacao.values)
+        criterio.id: notas[criterio.id],
       'pontuacaoTotal': pontuacaoTotal,
       'dataAvaliacao': dataAvaliacao.toIso8601String(),
     };
   }
 
-  factory AvaliacaoModel.fromMap(Map<String, dynamic> map) {
-    final rawNotas = map['notas'];
-    final parsedNotas = <String, int>{};
-    if (rawNotas is Map) {
-      for (final entry in rawNotas.entries) {
-        parsedNotas[entry.key.toString()] = (entry.value as num).toInt();
-      }
-    }
+  factory AvaliacaoModel.fromMap(Map<String, dynamic> map, {String? id}) {
+    final notas = <String, int>{
+      for (final criterio in CriterioAvaliacao.values)
+        if (map[criterio.id] is num)
+          criterio.id: (map[criterio.id] as num).toInt(),
+    };
 
-    final pontuacao =
-        (map['pontuacaoTotal'] as num?)?.toInt() ??
-        CriterioAvaliacao.calcularPontuacaoTotal(parsedNotas);
+    final dataRaw = map['dataAvaliacao'];
 
     return AvaliacaoModel(
-      id: map['id'] as String? ?? '',
+      id: id ?? map['id'] as String? ?? '',
       avaliadorUid: map['avaliadorUid'] as String? ?? '',
       pessoaId: map['pessoaId'] as String? ?? '',
-      notas: parsedNotas,
-      pontuacaoTotal: pontuacao,
-      dataAvaliacao: map['dataAvaliacao'] != null
-          ? DateTime.tryParse(map['dataAvaliacao'] as String) ?? DateTime.now()
+      notas: notas,
+      pontuacaoTotal:
+          (map['pontuacaoTotal'] as num?)?.toInt() ??
+          CriterioAvaliacao.calcularPontuacaoTotal(notas),
+      dataAvaliacao: dataRaw is String
+          ? DateTime.tryParse(dataRaw) ?? DateTime.now()
           : DateTime.now(),
     );
   }

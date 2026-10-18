@@ -8,10 +8,13 @@ import '../../../core/result/result.dart';
 import '../../../domain/models/pessoa_model.dart';
 import '../../viewmodels/auth_viewmodel.dart';
 import '../../viewmodels/pessoa_viewmodel.dart';
+import '../widgets/feedback.dart';
 
 class PessoaFormScreen extends StatefulWidget {
-  const PessoaFormScreen({super.key, this.pessoaParaEditar});
+  const PessoaFormScreen({super.key, this.pessoaId, this.pessoaParaEditar});
 
+  /// Quando informado, a tela abre em modo de edição.
+  final String? pessoaId;
   final PessoaModel? pessoaParaEditar;
 
   @override
@@ -23,47 +26,72 @@ class _PessoaFormScreenState extends State<PessoaFormScreen> {
   final _nomeController = TextEditingController();
   final _apelidoController = TextEditingController();
   final _dataNascimentoController = TextEditingController();
+  final _formatoData = DateFormat('dd/MM/yyyy');
 
-  String? _cursoSelecionado;
-  int? _turmaSelecionada;
-  DateTime? _dataNascimentoSelecionada;
+  final _pessoaViewModel = sl<PessoaViewModel>();
+  final _authViewModel = sl<AuthViewModel>();
 
-  late final PessoaViewModel _pessoaViewModel;
-  late final AuthViewModel _authViewModel;
+  String _cursoSelecionado = PessoaModel.cursosValidos.first;
+  int _turmaSelecionada = PessoaModel.turmaAnoMaximo;
+  DateTime? _dataNascimento;
+  bool _souEu = false;
 
-  bool get _isEditing => widget.pessoaParaEditar != null;
+  PessoaModel? _original;
+  bool _carregando = false;
 
-  static const List<String> _cursos = PessoaModel.cursosValidos;
-  static final List<int> _anos = List.generate(
-    PessoaModel.turmaAnoMaximo - PessoaModel.turmaAnoMinimo + 1,
-    (index) => PessoaModel.turmaAnoMaximo - index,
-  );
+  String? get _idEdicao => widget.pessoaId ?? widget.pessoaParaEditar?.id;
+  bool get _isEditing => _idEdicao != null;
+
+  static final List<int> _anos = [
+    for (
+      var ano = PessoaModel.turmaAnoMaximo;
+      ano >= PessoaModel.turmaAnoMinimo;
+      ano--
+    )
+      ano,
+  ];
 
   @override
   void initState() {
     super.initState();
-    _pessoaViewModel = sl<PessoaViewModel>();
-    _authViewModel = sl<AuthViewModel>();
+    final id = _idEdicao;
+    if (id == null) return;
 
-    if (_isEditing) {
-      final p = widget.pessoaParaEditar!;
-      _nomeController.text = p.nome;
-      _apelidoController.text = p.apelido;
-      _cursoSelecionado = p.curso.toUpperCase();
-      _turmaSelecionada = p.turma;
-      _dataNascimentoSelecionada = p.dataNascimento;
-      _dataNascimentoController.text = DateFormat('dd/MM/yyyy')
-          .format(p.dataNascimento);
+    final conhecida =
+        widget.pessoaParaEditar ?? _pessoaViewModel.pessoaPorId(id);
+    if (conhecida != null) {
+      _preencher(conhecida);
     } else {
-      _cursoSelecionado = _cursos.first;
-      _turmaSelecionada = DateTime.now().year.clamp(
-        PessoaModel.turmaAnoMinimo,
-        PessoaModel.turmaAnoMaximo,
-      );
-      _dataNascimentoSelecionada = DateTime(2005, 1, 1);
-      _dataNascimentoController.text = DateFormat('dd/MM/yyyy')
-          .format(_dataNascimentoSelecionada!);
+      _carregando = true;
+      WidgetsBinding.instance.addPostFrameCallback((_) => _buscar(id));
     }
+  }
+
+  Future<void> _buscar(String id) async {
+    final result = await _pessoaViewModel.buscarPessoaCommand(id);
+    if (!mounted) return;
+    setState(() => _carregando = false);
+    if (result case Success(data: final pessoa?)) {
+      setState(() => _preencher(pessoa));
+    } else {
+      mostrarErro(context, 'Pessoa não encontrada.');
+      context.pop();
+    }
+  }
+
+  void _preencher(PessoaModel p) {
+    _original = p;
+    _nomeController.text = p.nome;
+    _apelidoController.text = p.apelido;
+    _cursoSelecionado = PessoaModel.isCursoValido(p.curso)
+        ? p.curso.toUpperCase()
+        : PessoaModel.cursosValidos.first;
+    _turmaSelecionada = PessoaModel.isTurmaValida(p.turma)
+        ? p.turma
+        : PessoaModel.turmaAnoMaximo;
+    _dataNascimento = p.dataNascimento;
+    _dataNascimentoController.text = _formatoData.format(p.dataNascimento);
+    _souEu = _authViewModel.currentUser.value?.pessoaId == p.id;
   }
 
   @override
@@ -75,22 +103,19 @@ class _PessoaFormScreenState extends State<PessoaFormScreen> {
   }
 
   Future<void> _selecionarDataNascimento() async {
-    final DateTime initial = _dataNascimentoSelecionada ?? DateTime(2005, 1, 1);
-    final DateTime? picked = await showDatePicker(
+    final hoje = DateTime.now();
+    final picked = await showDatePicker(
       context: context,
-      initialDate: initial,
-      firstDate: DateTime(1950, 1, 1),
-      lastDate: DateTime.now(),
+      initialDate: _dataNascimento ?? DateTime(hoje.year - 16),
+      firstDate: DateTime(1940),
+      lastDate: hoje,
       helpText: 'Selecione a data de nascimento',
-      cancelText: 'Cancelar',
-      confirmText: 'Confirmar',
     );
 
     if (picked != null) {
       setState(() {
-        _dataNascimentoSelecionada = picked;
-        _dataNascimentoController.text = DateFormat('dd/MM/yyyy')
-            .format(picked);
+        _dataNascimento = picked;
+        _dataNascimentoController.text = _formatoData.format(picked);
       });
     }
   }
@@ -99,247 +124,229 @@ class _PessoaFormScreenState extends State<PessoaFormScreen> {
     if (!_formKey.currentState!.validate()) return;
     FocusScope.of(context).unfocus();
 
-    final currentUid = _authViewModel.currentUser.value?.uid ?? '';
-    final nome = _nomeController.text.trim();
-    final apelido = _apelidoController.text.trim();
-    final curso = _cursoSelecionado ?? _cursos.first;
-    final turma = _turmaSelecionada ?? 2026;
-    final dataNasc = _dataNascimentoSelecionada ?? DateTime(2000, 1, 1);
-
-    final PessoaModel pessoa;
-    if (_isEditing) {
-      pessoa = widget.pessoaParaEditar!.copyWith(
-        nome: nome,
-        apelido: apelido,
-        curso: curso,
-        turma: turma,
-        dataNascimento: dataNasc,
-      );
-    } else {
-      final novoId = 'pes_${DateTime.now().millisecondsSinceEpoch}';
-      pessoa = PessoaModel(
-        id: novoId,
-        nome: nome,
-        apelido: apelido,
-        curso: curso,
-        turma: turma,
-        dataNascimento: dataNasc,
-        criadoPor: currentUid,
-      );
-    }
+    final dados = PessoaModel(
+      id: _original?.id ?? '',
+      nome: _nomeController.text,
+      apelido: _apelidoController.text,
+      curso: _cursoSelecionado,
+      turma: _turmaSelecionada,
+      dataNascimento: _dataNascimento!,
+      criadoPor: _original?.criadoPor ?? '',
+    );
 
     final result = _isEditing
-        ? await _pessoaViewModel.alterarPessoaCommand(pessoa)
-        : await _pessoaViewModel.cadastrarPessoaCommand(pessoa);
-
+        ? await _pessoaViewModel.alterarPessoaCommand(dados)
+        : await _pessoaViewModel.cadastrarPessoaCommand(dados);
     if (!mounted) return;
 
-    if (result case Success()) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            _isEditing
-                ? 'Dados de $apelido atualizados com sucesso!'
-                : '$nome cadastrado com sucesso!',
-          ),
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
-      try {
-        context.pop();
-      } catch (_) {
-        Navigator.of(context).maybePop();
-      }
-    } else if (result case Failure()) {
-      final msg =
-          _pessoaViewModel.errorMessage.value ??
-          'Erro ao salvar cadastro da pessoa.';
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(msg),
-          backgroundColor: Theme.of(context).colorScheme.error,
-          behavior: SnackBarBehavior.floating,
-        ),
+    final salva = result.dataOrNull;
+    if (salva == null) {
+      mostrarErro(
+        context,
+        _pessoaViewModel.errorMessage.value ?? 'Erro ao salvar o cadastro.',
       );
       _pessoaViewModel.limparErro();
+      return;
     }
+
+    final vinculoAtual = _authViewModel.currentUser.value?.pessoaId;
+    final eraEu = vinculoAtual == salva.id;
+    if (_souEu != eraEu) {
+      final vinculo = await _authViewModel.vincularPessoaCommand(
+        _souEu ? salva.id : null,
+      );
+      if (!mounted) return;
+      if (vinculo case Failure()) {
+        mostrarErro(
+          context,
+          _authViewModel.errorMessage.value ??
+              'Não foi possível vincular a pessoa à sua conta.',
+        );
+        _authViewModel.limparErro();
+      }
+    }
+
+    mostrarSucesso(
+      context,
+      _isEditing
+          ? 'Dados de ${salva.nome} atualizados!'
+          : '${salva.nome} cadastrado(a) com sucesso!',
+    );
+    context.pop();
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final vinculoAtual = _authViewModel.currentUser.value?.pessoaId;
+    final podeMarcarSouEu =
+        vinculoAtual == null || vinculoAtual == _original?.id;
 
     return Scaffold(
       appBar: AppBar(
         title: Text(_isEditing ? 'Editar Pessoa' : 'Cadastrar Pessoa'),
       ),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 500),
-              child: Form(
-                key: _formKey,
-                child: SignalBuilder(
-                  builder: (context) {
-                    final loading = _pessoaViewModel.isLoading.value;
+      body: _carregando
+          ? const Center(child: CircularProgressIndicator())
+          : SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 20,
+                    vertical: 16,
+                  ),
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 500),
+                    child: Form(
+                      key: _formKey,
+                      child: SignalBuilder(
+                        builder: (context) {
+                          final loading =
+                              _pessoaViewModel.isLoading.value ||
+                              _authViewModel.isLoading.value;
 
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        TextFormField(
-                          controller: _nomeController,
-                          enabled: !loading,
-                          textCapitalization: TextCapitalization.words,
-                          decoration: const InputDecoration(
-                            labelText: 'Nome completo',
-                            prefixIcon: Icon(Icons.person_outline),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Informe o nome completo';
-                            }
-                            if (value.trim().length < 2) {
-                              return 'O nome deve ter no mínimo 2 caracteres';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _apelidoController,
-                          enabled: !loading,
-                          decoration: const InputDecoration(
-                            labelText: 'Apelido ou Como é conhecido',
-                            hintText: 'Ex: Batata, Zé, Biologia...',
-                            prefixIcon: Icon(Icons.alternate_email),
-                            border: OutlineInputBorder(),
-                          ),
-                          validator: (value) {
-                            if (value == null || value.trim().isEmpty) {
-                              return 'Informe um apelido ou forma como é conhecido';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<String>(
-                          initialValue: _cursoSelecionado,
-                          decoration: const InputDecoration(
-                            labelText: 'Curso',
-                            prefixIcon: Icon(Icons.school_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          items: _cursos.map((c) {
-                            return DropdownMenuItem<String>(
-                              value: c,
-                              child: Text(c),
-                            );
-                          }).toList(),
-                          onChanged: loading
-                              ? null
-                              : (val) {
-                                  if (val != null) {
-                                    setState(() => _cursoSelecionado = val);
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              TextFormField(
+                                key: const Key('pessoa_nome'),
+                                controller: _nomeController,
+                                enabled: !loading,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: const InputDecoration(
+                                  labelText: 'Nome completo',
+                                  prefixIcon: Icon(Icons.person_outline),
+                                ),
+                                validator: (value) {
+                                  if ((value?.trim().length ?? 0) < 2) {
+                                    return 'Informe o nome (mínimo 2 caracteres)';
                                   }
+                                  return null;
                                 },
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Selecione o curso';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        DropdownButtonFormField<int>(
-                          initialValue: _turmaSelecionada,
-                          decoration: const InputDecoration(
-                            labelText: 'Turma / Ano',
-                            prefixIcon: Icon(Icons.calendar_today_outlined),
-                            border: OutlineInputBorder(),
-                          ),
-                          items: _anos.map((ano) {
-                            return DropdownMenuItem<int>(
-                              value: ano,
-                              child: Text(ano.toString()),
-                            );
-                          }).toList(),
-                          onChanged: loading
-                              ? null
-                              : (val) {
-                                  if (val != null) {
-                                    setState(() => _turmaSelecionada = val);
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                key: const Key('pessoa_apelido'),
+                                controller: _apelidoController,
+                                enabled: !loading,
+                                decoration: const InputDecoration(
+                                  labelText: 'Apelido',
+                                  hintText: 'Como a pessoa é conhecida',
+                                  prefixIcon: Icon(Icons.alternate_email),
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Informe o apelido';
                                   }
+                                  return null;
                                 },
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Selecione a turma/ano';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 16),
-                        TextFormField(
-                          controller: _dataNascimentoController,
-                          readOnly: true,
-                          enabled: !loading,
-                          decoration: InputDecoration(
-                            labelText: 'Data de nascimento',
-                            hintText: 'dd/MM/yyyy',
-                            prefixIcon: const Icon(Icons.cake_outlined),
-                            suffixIcon: IconButton(
-                              icon: const Icon(Icons.date_range_outlined),
-                              onPressed: loading
-                                  ? null
-                                  : _selecionarDataNascimento,
-                            ),
-                            border: const OutlineInputBorder(),
-                          ),
-                          onTap: loading ? null : _selecionarDataNascimento,
-                          validator: (value) {
-                            if (_dataNascimentoSelecionada == null) {
-                              return 'Informe a data de nascimento';
-                            }
-                            return null;
-                          },
-                        ),
-                        const SizedBox(height: 28),
-                        FilledButton.icon(
-                          onPressed: loading ? null : _salvar,
-                          style: FilledButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(vertical: 14),
-                          ),
-                          icon: loading
-                              ? const SizedBox(
-                                  width: 20,
-                                  height: 20,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white,
-                                    ),
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<String>(
+                                key: const Key('pessoa_curso'),
+                                initialValue: _cursoSelecionado,
+                                decoration: const InputDecoration(
+                                  labelText: 'Curso',
+                                  prefixIcon: Icon(Icons.school_outlined),
+                                ),
+                                items: [
+                                  for (final c in PessoaModel.cursosValidos)
+                                    DropdownMenuItem(value: c, child: Text(c)),
+                                ],
+                                onChanged: loading
+                                    ? null
+                                    : (val) => setState(
+                                        () => _cursoSelecionado = val!,
+                                      ),
+                              ),
+                              const SizedBox(height: 16),
+                              DropdownButtonFormField<int>(
+                                key: const Key('pessoa_turma'),
+                                initialValue: _turmaSelecionada,
+                                menuMaxHeight: 320,
+                                decoration: const InputDecoration(
+                                  labelText: 'Turma / Ano',
+                                  prefixIcon: Icon(
+                                    Icons.calendar_today_outlined,
                                   ),
-                                )
-                              : const Icon(Icons.save_outlined),
-                          label: Text(
-                            _isEditing ? 'Atualizar Dados' : 'Salvar Cadastro',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-                      ],
-                    );
-                  },
+                                ),
+                                items: [
+                                  for (final ano in _anos)
+                                    DropdownMenuItem(
+                                      value: ano,
+                                      child: Text('$ano'),
+                                    ),
+                                ],
+                                onChanged: loading
+                                    ? null
+                                    : (val) => setState(
+                                        () => _turmaSelecionada = val!,
+                                      ),
+                              ),
+                              const SizedBox(height: 16),
+                              TextFormField(
+                                key: const Key('pessoa_nascimento'),
+                                controller: _dataNascimentoController,
+                                readOnly: true,
+                                enabled: !loading,
+                                decoration: const InputDecoration(
+                                  labelText: 'Data de nascimento',
+                                  hintText: 'dd/mm/aaaa',
+                                  prefixIcon: Icon(Icons.cake_outlined),
+                                  suffixIcon: Icon(Icons.date_range_outlined),
+                                ),
+                                onTap: loading
+                                    ? null
+                                    : _selecionarDataNascimento,
+                                validator: (_) => _dataNascimento == null
+                                    ? 'Selecione a data de nascimento'
+                                    : null,
+                              ),
+                              const SizedBox(height: 8),
+                              CheckboxListTile(
+                                key: const Key('pessoa_sou_eu'),
+                                value: _souEu,
+                                contentPadding: EdgeInsets.zero,
+                                controlAffinity:
+                                    ListTileControlAffinity.leading,
+                                title: const Text('Esta pessoa sou eu'),
+                                subtitle: Text(
+                                  podeMarcarSouEu
+                                      ? 'Vincula o cadastro à sua conta. Você não poderá se autoavaliar.'
+                                      : 'Sua conta já está vinculada a outra pessoa.',
+                                  style: theme.textTheme.bodySmall,
+                                ),
+                                onChanged: loading || !podeMarcarSouEu
+                                    ? null
+                                    : (v) => setState(() => _souEu = v!),
+                              ),
+                              const SizedBox(height: 20),
+                              FilledButton.icon(
+                                onPressed: loading ? null : _salvar,
+                                icon: loading
+                                    ? const SizedBox(
+                                        width: 20,
+                                        height: 20,
+                                        child: CircularProgressIndicator(
+                                          strokeWidth: 2,
+                                        ),
+                                      )
+                                    : const Icon(Icons.save_outlined),
+                                label: Text(
+                                  _isEditing
+                                      ? 'Atualizar Dados'
+                                      : 'Salvar Cadastro',
+                                ),
+                              ),
+                            ],
+                          );
+                        },
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
-          ),
-        ),
-      ),
     );
   }
 }

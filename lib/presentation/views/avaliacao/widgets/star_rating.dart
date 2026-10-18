@@ -1,43 +1,44 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/theme/app_theme.dart';
+
 class StarRating extends StatelessWidget {
   const StarRating({
     super.key,
     required this.rating,
     this.onRatingChanged,
     this.starSize = 32.0,
-    this.color,
+    this.maximo = 5,
   });
 
   final int rating;
   final ValueChanged<int>? onRatingChanged;
   final double starSize;
-  final Color? color;
+  final int maximo;
 
   @override
   Widget build(BuildContext context) {
-    final activeColor = color ?? Colors.amber.shade700;
     final inactiveColor = Theme.of(context).colorScheme.outlineVariant;
 
     return Row(
       mainAxisSize: MainAxisSize.min,
-      children: List.generate(5, (index) {
-        final starIndex = index + 1;
-        final isFilled = starIndex <= rating;
+      children: List.generate(maximo, (index) {
+        final valor = index + 1;
+        final preenchida = valor <= rating;
 
         final icon = Icon(
-          isFilled ? Icons.star_rounded : Icons.star_outline_rounded,
-          color: isFilled ? activeColor : inactiveColor,
+          preenchida ? Icons.star_rounded : Icons.star_outline_rounded,
+          color: preenchida ? AppColors.estrela : inactiveColor,
           size: starSize,
+          semanticLabel: '$valor estrela${valor > 1 ? 's' : ''}',
         );
 
-        if (onRatingChanged == null) {
-          return icon;
-        }
+        if (onRatingChanged == null) return icon;
 
         return InkResponse(
-          onTap: () => onRatingChanged!(starIndex),
-          radius: starSize,
+          key: ValueKey('estrela_$valor'),
+          onTap: () => onRatingChanged!(valor),
+          radius: starSize * 0.7,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 3),
             child: icon,
