@@ -1,68 +1,113 @@
 # PiramidGame IFPR-Pgua
 
-Aplicativo móvel desenvolvido para a disciplina de Programação para Dispositivos Móveis no Instituto Federal do Paraná (IFPR) - Campus Paranaguá.
+Aplicativo Flutter da disciplina de Programação para Dispositivos Móveis do IFPR – Campus Paranaguá.
 
-O projeto implementa uma plataforma de avaliação e classificação colaborativa baseada na "Pirâmide de Lendas", permitindo cadastro de pessoas, avaliação segundo 15 critérios objetivos (notas de 1 a 5 estrelas) e geração dinâmica de rankings pessoais e globais.
+Permite cadastrar pessoas do campus e avaliá-las em 15 critérios descontraídos de popularidade (1 a 5 estrelas cada). A soma das notas forma o **Nível Lenda** (15 a 75 pontos). Cada usuário tem o seu **ranking pessoal** e todos contribuem para o **ranking global**, calculado pela média das avaliações recebidas.
 
----
+## Funcionalidades
 
-## Funcionalidades Principais
+- Cadastro e login com e-mail/senha e login com conta Google (Firebase Authentication)
+- Sessão mantida ao reabrir o app (a validade é sempre decidida pelo Firebase)
+- Cadastro, listagem com busca e filtro por curso, detalhes, edição e remoção de pessoas
+- Curso (INFO, MEC, MAMB, PROD, TADS, TGA), turma/ano (1998–2026) e data de nascimento por seleção
+- Avaliação com Star Rating nos 15 critérios e alteração posterior da avaliação
+- Uma avaliação por usuário e pessoa (`usuário + pessoa = uma avaliação`)
+- Bloqueio de autoavaliação: o usuário vincula o próprio cadastro com **"Esta pessoa sou eu"**
+- Ranking pessoal e ranking global (média + quantidade de avaliações)
+- Tema claro/escuro alternado em tempo de execução e salvo no aparelho
+- Tela Sobre o App
 
-- **Autenticação de Usuários**: Login e cadastro com e-mail/senha e autenticação via Google (Firebase Auth).
-- **Gestão de Pessoas (CRUD)**: Cadastro, listagem com busca e filtro por curso, edição e remoção com diálogo de confirmação.
-- **Sistema de Avaliação por Estrelas (Star Rating)**: Avaliação interativa em 15 critérios, cálculo dinâmico do Nível Lenda (Bronze a Diamante) e bloqueio estrito de autoavaliação.
-- **Rankings em Tempo Real**:
-  - **Ranking Pessoal**: Exibe a lista ordenada pelas pontuações concedidas pelo usuário logado ("Quem eu acho mais lenda?").
-  - **Ranking Global**: Média aritmética ponderada e classificação geral de todos os avaliadores da turma/campus ("Quem a galera acha mais lenda?").
-- **Personalização de Tema**: Alternância entre tema claro e escuro persistida localmente.
-- **Tela Sobre Acadêmica**: Apresentação institucional com contexto do jogo e descrição completa dos critérios.
+## Regras de negócio
 
----
+| Regra | Onde é validada |
+| --- | --- |
+| Avaliar exige usuário autenticado | `ValidarAvaliacaoUseCase` + `firestore.rules` |
+| Notas entre 1 e 5 nos 15 critérios | `ValidarAvaliacaoUseCase` + `firestore.rules` |
+| Pontuação total calculada automaticamente | `ValidarAvaliacaoUseCase` + `firestore.rules` |
+| Não é permitido avaliar a si próprio | `VerificarAutoavaliacaoUseCase` + `firestore.rules` |
+| Uma avaliação ativa por usuário/pessoa | id `<uid>_<pessoaId>`, `RegistrarAvaliacaoUseCase` / `AlterarAvaliacaoUseCase` |
+| Remoção pede confirmação e só quem cadastrou remove | `RemoverPessoaUseCase` + `firestore.rules` |
+| Ao remover uma pessoa, as avaliações dela saem dos rankings | `FirestoreService.removerPessoa` (batch) |
+| Uma pessoa só pode estar vinculada a uma conta | `VincularPessoaUseCase` |
 
-## Tecnologias Utilizadas
+## Tecnologias
 
-- **Flutter / Dart** (SDK 3.9+)
-- **Firebase Authentication** (Gestão de contas e login social)
-- **Cloud Firestore** (Persistência NoSQL e sincronização em tempo real)
-- **Signals (`signals_flutter`)** (Gerenciamento de estado reativo e Command Pattern)
-- **GoRouter** (Navegação declarativa com redirecionamentos de autenticação)
-- **SharedPreferences** (Armazenamento de preferências locais e tema)
+Flutter, Firebase Authentication, Cloud Firestore, SharedPreferences, go_router e signals_flutter.
 
----
+## Arquitetura
 
-## Como Executar o Projeto
+O projeto segue MVVM com Arquitetura Limpa, usando os padrões Command (ações da interface) e Result (retornos entre camadas):
 
-### Pré-requisitos
-- Flutter SDK instalado e configurado no PATH
-- Dispositivo físico conectado (com depuração USB) ou emulador Android/iOS
-
-### Passo a Passo
-
-1. Obtenha as dependências do projeto:
-   ```bash
-   flutter pub get
-   ```
-
-2. Verifique a integridade do código e execute os testes:
-   ```bash
-   flutter analyze
-   flutter test
-   ```
-
-3. Execute o aplicativo:
-   ```bash
-   flutter run
-   ```
-
----
-
-## Estrutura do Projeto
+```
+UI → ViewModel (Signals + Commands) → Facade → Use Cases → Repositories → Services → Firebase
+```
 
 ```
 lib/
-├── core/             # Utilitários, Command pattern, injeção de dependência e rotas
-├── data/             # Serviços (Auth, Firestore, LocalStorage) e repositórios
-├── domain/           # Entidades/modelos, interfaces, use cases e facades
-├── presentation/     # ViewModels (Signals), telas (Views) e componentes reutilizáveis
-└── main.dart         # Ponto de entrada e inicialização das dependências
+├── core/           # Command, Result, injeção de dependências, rotas e tema
+├── data/
+│   ├── errors/     # Conversão de erros do Firebase em mensagens para o usuário
+│   ├── services/   # AuthService, GoogleAuthService, FirestoreService, LocalStorageService
+│   └── repositories/
+├── domain/
+│   ├── models/
+│   ├── repositories/  # Interfaces
+│   ├── usecases/      # Regras de negócio (auth, pessoa, avaliação, ranking, tema)
+│   └── facades/       # AuthFacade, PessoaFacade, AvaliacaoFacade, RankingFacade, TemaFacade
+└── presentation/
+    ├── viewmodels/
+    └── views/
 ```
+
+A UI conversa apenas com as ViewModels; Firebase e SharedPreferences ficam restritos aos services.
+
+### Firestore
+
+```
+usuarios/{uid}          nome, email, foto, provider, pessoaId
+pessoas/{id}            nome, apelido, curso, turma, dataNascimento, criadoPor
+avaliacoes/{uid_pessoa} avaliadorUid, pessoaId, resenha, presencaVip, aura, ...,
+                        caosControlado, pontuacaoTotal, dataAvaliacao
+```
+
+O SharedPreferences guarda somente a preferência de tema e um cache simples do usuário logado (nunca a senha).
+
+## Configuração do Firebase
+
+1. No console do Firebase, em **Authentication → Sign-in method**, habilite **E-mail/senha** e **Google**.
+2. Em **Authentication → Settings → Authorized domains**, confira se `localhost` está na lista.
+3. (Opcional) Publique as regras de segurança: `firebase deploy --only firestore:rules`.
+
+A configuração do app web já está em `lib/firebase_options.dart`. Para rodar em Android é preciso registrar o app Android no projeto e gerar as opções com `flutterfire configure`.
+
+## Como executar
+
+```bash
+flutter pub get
+flutter run -d chrome
+```
+
+## Testes
+
+```bash
+flutter analyze
+flutter test
+```
+
+Os testes de `test/` usam repositórios em memória e cobrem modelos, use cases, ViewModels e o fluxo completo da interface com o router real.
+
+Os testes de `integration_test/` rodam contra o Firebase real. No navegador é necessário um [ChromeDriver](https://googlechromelabs.github.io/chrome-for-testing/) da mesma versão do Chrome rodando na porta 4444:
+
+```bash
+chromedriver --port=4444
+
+# use cases + Firestore (com o banco em modo de teste)
+flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/firestore_e2e_test.dart -d web-server --browser-name=chrome
+
+# fluxo completo pela interface (requer o Authentication habilitado)
+flutter drive --driver=test_driver/integration_test.dart \
+  --target=integration_test/app_e2e_test.dart -d web-server --browser-name=chrome
+```
+
+Os dois testes apagam os dados que criam ao final.

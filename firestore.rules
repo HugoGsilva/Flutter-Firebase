@@ -1,0 +1,96 @@
+rules_version = '2';
+
+// Regras de segurança do PiramidGame IFPR-Pgua.
+// Repetem no servidor as regras de negócio validadas pelos use cases.
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function autenticado() {
+      return request.auth != null;
+    }
+
+    function criterios() {
+      return ['resenha', 'presencaVip', 'aura', 'modoParceiro',
+              'carismaNatural', 'humorDeMilhoes', 'energiaDeGrupo',
+              'criatividadeCaotica', 'modoAtleta', 'talentoDePalco',
+              'dripEscolar', 'coracaoDeDorama', 'queridinhoProfessores',
+              'cerebroTurbo', 'caosControlado'];
+    }
+
+    function notaValida(d, campo) {
+      return d[campo] is int && d[campo] >= 1 && d[campo] <= 5;
+    }
+
+    function notasValidas(d) {
+      return notaValida(d, 'resenha') && notaValida(d, 'presencaVip')
+        && notaValida(d, 'aura') && notaValida(d, 'modoParceiro')
+        && notaValida(d, 'carismaNatural') && notaValida(d, 'humorDeMilhoes')
+        && notaValida(d, 'energiaDeGrupo') && notaValida(d, 'criatividadeCaotica')
+        && notaValida(d, 'modoAtleta') && notaValida(d, 'talentoDePalco')
+        && notaValida(d, 'dripEscolar') && notaValida(d, 'coracaoDeDorama')
+        && notaValida(d, 'queridinhoProfessores') && notaValida(d, 'cerebroTurbo')
+        && notaValida(d, 'caosControlado');
+    }
+
+    function somaNotas(d) {
+      return d.resenha + d.presencaVip + d.aura + d.modoParceiro
+        + d.carismaNatural + d.humorDeMilhoes + d.energiaDeGrupo
+        + d.criatividadeCaotica + d.modoAtleta + d.talentoDePalco
+        + d.dripEscolar + d.coracaoDeDorama + d.queridinhoProfessores
+        + d.cerebroTurbo + d.caosControlado;
+    }
+
+    function pessoaVinculadaAoUsuario() {
+      let perfil = /databases/$(database)/documents/usuarios/$(request.auth.uid);
+      return exists(perfil) ? get(perfil).data.get('pessoaId', null) : null;
+    }
+
+    function cursoValido(curso) {
+      return curso in ['INFO', 'MEC', 'MAMB', 'PROD', 'TADS', 'TGA'];
+    }
+
+    function pessoaValida(d) {
+      return d.nome is string && d.nome.size() >= 2
+        && d.apelido is string && d.apelido.size() > 0
+        && cursoValido(d.curso)
+        && d.turma is int && d.turma >= 1998 && d.turma <= 2026
+        && d.dataNascimento is string;
+    }
+
+    match /usuarios/{uid} {
+      allow read: if autenticado();
+      allow create, update: if autenticado() && request.auth.uid == uid;
+      allow delete: if autenticado() && request.auth.uid == uid;
+    }
+
+    match /pessoas/{pessoaId} {
+      allow read: if autenticado();
+      allow create: if autenticado()
+        && request.resource.data.criadoPor == request.auth.uid
+        && pessoaValida(request.resource.data);
+      allow update: if autenticado()
+        && request.resource.data.criadoPor == resource.data.criadoPor
+        && pessoaValida(request.resource.data);
+      allow delete: if autenticado()
+        && resource.data.criadoPor == request.auth.uid;
+    }
+
+    // Usuário + pessoa avaliada = uma avaliação (id "<uid>_<pessoaId>").
+    match /avaliacoes/{avaliacaoId} {
+      allow read: if autenticado();
+      allow create, update: if autenticado()
+        && request.resource.data.avaliadorUid == request.auth.uid
+        && avaliacaoId == request.auth.uid + '_' + request.resource.data.pessoaId
+        && exists(/databases/$(database)/documents/pessoas/$(request.resource.data.pessoaId))
+        && pessoaVinculadaAoUsuario() != request.resource.data.pessoaId
+        && notasValidas(request.resource.data)
+        && request.resource.data.pontuacaoTotal == somaNotas(request.resource.data);
+      // O avaliador pode apagar a própria avaliação; quem cadastrou a pessoa
+      // apaga as avaliações recebidas por ela ao removê-la.
+      allow delete: if autenticado() && (
+        resource.data.avaliadorUid == request.auth.uid
+        || get(/databases/$(database)/documents/pessoas/$(resource.data.pessoaId)).data.criadoPor == request.auth.uid
+      );
+    }
+  }
+}
