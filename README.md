@@ -78,7 +78,7 @@ O SharedPreferences guarda somente a preferência de tema e um cache simples do 
 2. Em **Authentication → Settings → Authorized domains**, confira se `localhost` está na lista.
 3. (Opcional) Publique as regras de segurança: `firebase deploy --only firestore:rules`.
 
-A configuração do app web já está em `lib/firebase_options.dart`. Para rodar em Android é preciso registrar o app Android no projeto e gerar as opções com `flutterfire configure`.
+As configurações dos apps web e Android (`br.edu.ifpr.piramid_game`) estão em `lib/firebase_options.dart`. Para o login com Google no Android, o SHA-1 do certificado de assinatura precisa estar cadastrado no app Android do Firebase.
 
 ## Como executar
 
