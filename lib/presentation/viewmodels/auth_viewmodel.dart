@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:signals_flutter/signals_flutter.dart';
 
 import '../../core/command/command.dart';
@@ -14,6 +16,13 @@ class AuthViewModel extends BaseViewModel {
     loginGoogleCommand = Command0<UsuarioModel>(_loginGoogle);
     logoutCommand = Command0<void>(_logout);
     vincularPessoaCommand = Command1<UsuarioModel, String?>(_vincularPessoa);
+    atualizarPerfilCommand = Command1<UsuarioModel, String>(_atualizarPerfil);
+    atualizarFotoCommand = Command3<UsuarioModel, Uint8List, String, String>(
+      _atualizarFoto,
+    );
+    removerFotoCommand = Command0<UsuarioModel>(_removerFoto);
+    alterarSenhaCommand = Command3<void, String, String, String>(_alterarSenha);
+    recuperarSenhaCommand = Command1<void, String>(_recuperarSenha);
   }
 
   final AuthFacade _authFacade;
@@ -31,8 +40,19 @@ class AuthViewModel extends BaseViewModel {
   late final Command0<UsuarioModel> loginGoogleCommand;
   late final Command0<void> logoutCommand;
   late final Command1<UsuarioModel, String?> vincularPessoaCommand;
+  late final Command1<UsuarioModel, String> atualizarPerfilCommand;
+  late final Command3<UsuarioModel, Uint8List, String, String>
+  atualizarFotoCommand;
+  late final Command0<UsuarioModel> removerFotoCommand;
+  late final Command3<void, String, String, String> alterarSenhaCommand;
+  late final Command1<void, String> recuperarSenhaCommand;
 
-  void _definirUsuario(UsuarioModel? usuario) => currentUser.value = usuario;
+  void _definirUsuario(UsuarioModel? usuario) {
+    currentUser.value = usuario;
+    if (usuario != null) {
+      nomeEmCache.value = usuario.nome;
+    }
+  }
 
   Future<void> carregarCache() async {
     final cache = await _authFacade.usuarioEmCache();
@@ -83,5 +103,49 @@ class AuthViewModel extends BaseViewModel {
       () => _authFacade.vincularPessoa(pessoaId),
       aoConcluir: _definirUsuario,
     );
+  }
+
+  Future<Result<UsuarioModel>> _atualizarPerfil(String nome) {
+    return executar(
+      () => _authFacade.atualizarNome(nome: nome),
+      aoConcluir: _definirUsuario,
+    );
+  }
+
+  Future<Result<UsuarioModel>> _atualizarFoto(
+    Uint8List bytes,
+    String nomeArquivo,
+    String mimeType,
+  ) {
+    return executar(
+      () => _authFacade.atualizarFotoPerfil(
+        bytes: bytes,
+        nomeArquivo: nomeArquivo,
+        mimeType: mimeType,
+      ),
+      aoConcluir: _definirUsuario,
+    );
+  }
+
+  Future<Result<UsuarioModel>> _removerFoto() {
+    return executar(_authFacade.removerFotoPerfil, aoConcluir: _definirUsuario);
+  }
+
+  Future<Result<void>> _alterarSenha(
+    String senhaAtual,
+    String novaSenha,
+    String confirmacaoSenha,
+  ) {
+    return executar(
+      () => _authFacade.alterarSenha(
+        senhaAtual: senhaAtual,
+        novaSenha: novaSenha,
+        confirmacaoSenha: confirmacaoSenha,
+      ),
+    );
+  }
+
+  Future<Result<void>> _recuperarSenha(String email) {
+    return executar(() => _authFacade.recuperarSenha(email: email));
   }
 }

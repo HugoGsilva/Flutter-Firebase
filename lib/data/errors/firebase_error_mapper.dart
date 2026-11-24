@@ -38,6 +38,10 @@ String mensagemAuth(String code) {
       'Este método de login não está habilitado no Firebase.',
     'configuration-not-found' || 'internal-error' =>
       'O Firebase Authentication não está configurado para este projeto.',
+    'requires-recent-login' =>
+      'Por segurança, entre novamente na sua conta para concluir esta ação.',
+    'user-mismatch' =>
+      'As credenciais informadas não correspondem à conta atual.',
     _ => 'Não foi possível autenticar ($code).',
   };
 }

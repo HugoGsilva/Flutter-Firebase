@@ -18,6 +18,9 @@ class UsuarioModel {
   /// autoavaliação). Pode ser nula quando o usuário ainda não se vinculou.
   final String? pessoaId;
 
+  /// Indica se a conta usa autenticação por e-mail/senha no Firebase Auth.
+  bool get podeAlterarSenha => provider == 'password';
+
   UsuarioModel copyWith({
     String? uid,
     String? nome,
@@ -31,6 +34,17 @@ class UsuarioModel {
       email: email ?? this.email,
       foto: foto ?? this.foto,
       provider: provider ?? this.provider,
+      pessoaId: pessoaId,
+    );
+  }
+
+  UsuarioModel comFoto(String? novaFoto) {
+    return UsuarioModel(
+      uid: uid,
+      nome: nome,
+      email: email,
+      foto: novaFoto,
+      provider: provider,
       pessoaId: pessoaId,
     );
   }
@@ -73,9 +87,12 @@ class UsuarioModel {
       other is UsuarioModel &&
           runtimeType == other.runtimeType &&
           uid == other.uid &&
+          nome == other.nome &&
           email == other.email &&
+          foto == other.foto &&
+          provider == other.provider &&
           pessoaId == other.pessoaId;
 
   @override
-  int get hashCode => Object.hash(uid, email, pessoaId);
+  int get hashCode => Object.hash(uid, nome, email, foto, provider, pessoaId);
 }

@@ -5,6 +5,7 @@ import '../../data/repositories/preference_repository_impl.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/firestore_service.dart';
 import '../../data/services/google_auth_service.dart';
+import '../../data/services/image_picker_service.dart';
 import '../../data/services/local_storage_service.dart';
 import '../../domain/facades/auth_facade.dart';
 import '../../domain/facades/avaliacao_facade.dart';
@@ -15,10 +16,15 @@ import '../../domain/repositories/auth_repository.dart';
 import '../../domain/repositories/avaliacao_repository.dart';
 import '../../domain/repositories/pessoa_repository.dart';
 import '../../domain/repositories/preference_repository.dart';
+import '../../domain/usecases/auth/alterar_senha_usecase.dart';
+import '../../domain/usecases/auth/atualizar_foto_perfil_usecase.dart';
+import '../../domain/usecases/auth/atualizar_perfil_usecase.dart';
 import '../../domain/usecases/auth/cadastrar_usuario_usecase.dart';
 import '../../domain/usecases/auth/login_email_usecase.dart';
 import '../../domain/usecases/auth/login_google_usecase.dart';
 import '../../domain/usecases/auth/logout_usecase.dart';
+import '../../domain/usecases/auth/recuperar_senha_usecase.dart';
+import '../../domain/usecases/auth/remover_foto_perfil_usecase.dart';
 import '../../domain/usecases/auth/verificar_autenticado_usecase.dart';
 import '../../domain/usecases/auth/vincular_pessoa_usecase.dart';
 import '../../domain/usecases/avaliacao/alterar_avaliacao_usecase.dart';
@@ -82,6 +88,7 @@ void setupDependencies({
   PessoaRepository? pessoaRepository,
   AvaliacaoRepository? avaliacaoRepository,
   PreferenceRepository? preferenceRepository,
+  ImagePickerService? imagePickerService,
 }) {
   sl.reset();
 
@@ -90,6 +97,9 @@ void setupDependencies({
   sl.registerLazySingleton<GoogleAuthService>(() => GoogleAuthService());
   sl.registerLazySingleton<FirestoreService>(() => FirestoreService());
   sl.registerLazySingleton<LocalStorageService>(() => LocalStorageService());
+  sl.registerLazySingleton<ImagePickerService>(
+    () => imagePickerService ?? ImagePickerServiceImpl(),
+  );
 
   // 2. Repositories
   sl.registerLazySingleton<AuthRepository>(
@@ -143,6 +153,30 @@ void setupDependencies({
       sl<PessoaRepository>(),
       sl<PreferenceRepository>(),
     ),
+  );
+  sl.registerLazySingleton<AtualizarPerfilUseCase>(
+    () => AtualizarPerfilUseCase(
+      sl<AuthRepository>(),
+      sl<PreferenceRepository>(),
+    ),
+  );
+  sl.registerLazySingleton<AtualizarFotoPerfilUseCase>(
+    () => AtualizarFotoPerfilUseCase(
+      sl<AuthRepository>(),
+      sl<PreferenceRepository>(),
+    ),
+  );
+  sl.registerLazySingleton<RemoverFotoPerfilUseCase>(
+    () => RemoverFotoPerfilUseCase(
+      sl<AuthRepository>(),
+      sl<PreferenceRepository>(),
+    ),
+  );
+  sl.registerLazySingleton<AlterarSenhaUseCase>(
+    () => AlterarSenhaUseCase(sl<AuthRepository>()),
+  );
+  sl.registerLazySingleton<RecuperarSenhaUseCase>(
+    () => RecuperarSenhaUseCase(sl<AuthRepository>()),
   );
 
   // Avaliação
@@ -230,6 +264,11 @@ void setupDependencies({
       logoutUseCase: sl<LogoutUseCase>(),
       verificarAutenticadoUseCase: sl<VerificarAutenticadoUseCase>(),
       vincularPessoaUseCase: sl<VincularPessoaUseCase>(),
+      atualizarPerfilUseCase: sl<AtualizarPerfilUseCase>(),
+      atualizarFotoPerfilUseCase: sl<AtualizarFotoPerfilUseCase>(),
+      removerFotoPerfilUseCase: sl<RemoverFotoPerfilUseCase>(),
+      alterarSenhaUseCase: sl<AlterarSenhaUseCase>(),
+      recuperarSenhaUseCase: sl<RecuperarSenhaUseCase>(),
     ),
   );
   sl.registerLazySingleton<AvaliacaoFacade>(

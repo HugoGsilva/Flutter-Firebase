@@ -53,6 +53,32 @@ class _LoginScreenState extends State<LoginScreen> {
     _tratarResultado(result, 'Erro ao entrar com Google.');
   }
 
+  Future<void> _handleEsqueciSenha() async {
+    final email = await showDialog<String>(
+      context: context,
+      builder: (_) =>
+          _DialogRecuperarSenha(emailInicial: _emailController.text.trim()),
+    );
+    if (!mounted || email == null) return;
+
+    final result = await _authViewModel.recuperarSenhaCommand(email);
+    if (!mounted) return;
+
+    if (result case Success()) {
+      mostrarSucesso(
+        context,
+        'Enviamos um link de redefinição de senha para $email.',
+      );
+    } else {
+      mostrarErro(
+        context,
+        _authViewModel.errorMessage.value ??
+            'Não foi possível enviar o e-mail de recuperação.',
+      );
+      _authViewModel.limparErro();
+    }
+  }
+
   void _tratarResultado(Result<Object?> result, String mensagemPadrao) {
     if (!mounted) return;
     if (result case Success()) {
@@ -154,7 +180,15 @@ class _LoginScreenState extends State<LoginScreen> {
                             return null;
                           },
                         ),
-                        const SizedBox(height: 24),
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: TextButton(
+                            key: const Key('login_esqueci_senha'),
+                            onPressed: loading ? null : _handleEsqueciSenha,
+                            child: const Text('Esqueci minha senha'),
+                          ),
+                        ),
+                        const SizedBox(height: 12),
                         FilledButton(
                           onPressed: loading ? null : _handleLogin,
                           child: loading
@@ -204,6 +238,77 @@ class _LoginScreenState extends State<LoginScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _DialogRecuperarSenha extends StatefulWidget {
+  const _DialogRecuperarSenha({required this.emailInicial});
+
+  final String emailInicial;
+
+  @override
+  State<_DialogRecuperarSenha> createState() => _DialogRecuperarSenhaState();
+}
+
+class _DialogRecuperarSenhaState extends State<_DialogRecuperarSenha> {
+  final _formKey = GlobalKey<FormState>();
+  late final TextEditingController _controller;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller = TextEditingController(text: widget.emailInicial);
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  void _confirmar() {
+    if (!_formKey.currentState!.validate()) return;
+    Navigator.of(context).pop(_controller.text.trim());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Recuperar senha'),
+      content: Form(
+        key: _formKey,
+        child: TextFormField(
+          key: const Key('recuperar_email'),
+          controller: _controller,
+          keyboardType: TextInputType.emailAddress,
+          autofocus: true,
+          decoration: const InputDecoration(
+            labelText: 'E-mail da conta',
+            hintText: 'seu.email@exemplo.com',
+            prefixIcon: Icon(Icons.email_outlined),
+          ),
+          validator: (value) {
+            final email = value?.trim() ?? '';
+            if (email.isEmpty || !email.contains('@') || !email.contains('.')) {
+              return 'Informe um e-mail válido';
+            }
+            return null;
+          },
+          onFieldSubmitted: (_) => _confirmar(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancelar'),
+        ),
+        FilledButton(
+          key: const Key('recuperar_enviar'),
+          onPressed: _confirmar,
+          child: const Text('Enviar'),
+        ),
+      ],
     );
   }
 }

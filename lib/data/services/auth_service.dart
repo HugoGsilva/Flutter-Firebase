@@ -1,5 +1,6 @@
 import 'package:firebase_auth/firebase_auth.dart';
 
+import '../../core/result/app_exception.dart';
 import '../../domain/models/usuario_model.dart';
 
 class AuthService {
@@ -49,7 +50,58 @@ class AuthService {
 
   Future<void> logout() => _firebaseAuth.signOut();
 
-  static UsuarioModel mapearUsuario(User user, {String? nome}) {
+  Future<UsuarioModel> atualizarPerfil({
+    String? nome,
+    String? foto,
+    bool atualizarFoto = false,
+  }) async {
+    final user = _firebaseAuth.currentUser;
+    if (user == null) {
+      throw const AppException('Você precisa estar autenticado.');
+    }
+    if (nome != null) {
+      await user.updateDisplayName(nome);
+    }
+    if (atualizarFoto && (foto == null || !foto.startsWith('data:'))) {
+      await user.updatePhotoURL(foto);
+    }
+    await user.reload();
+    final atualizado = _firebaseAuth.currentUser ?? user;
+    return mapearUsuario(
+      atualizado,
+      nome: nome ?? atualizado.displayName,
+      foto: atualizarFoto ? foto : atualizado.photoURL,
+      sobrescreverFoto: atualizarFoto,
+    );
+  }
+
+  Future<void> alterarSenha({
+    required String senhaAtual,
+    required String novaSenha,
+  }) async {
+    final user = _firebaseAuth.currentUser;
+    final email = user?.email;
+    if (user == null || email == null || email.isEmpty) {
+      throw const AppException('Você precisa estar autenticado.');
+    }
+    final credential = EmailAuthProvider.credential(
+      email: email,
+      password: senhaAtual,
+    );
+    await user.reauthenticateWithCredential(credential);
+    await user.updatePassword(novaSenha);
+  }
+
+  Future<void> enviarEmailRecuperacaoSenha(String email) {
+    return _firebaseAuth.sendPasswordResetEmail(email: email);
+  }
+
+  static UsuarioModel mapearUsuario(
+    User user, {
+    String? nome,
+    String? foto,
+    bool sobrescreverFoto = false,
+  }) {
     final provider = user.providerData.isNotEmpty
         ? user.providerData.first.providerId
         : 'password';
@@ -58,7 +110,7 @@ class AuthService {
       uid: user.uid,
       nome: nome ?? user.displayName ?? '',
       email: user.email ?? '',
-      foto: user.photoURL,
+      foto: sobrescreverFoto ? foto : (foto ?? user.photoURL),
       provider: provider,
     );
   }

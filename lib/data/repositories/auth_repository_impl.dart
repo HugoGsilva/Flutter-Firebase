@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import '../../core/result/app_exception.dart';
 import '../../domain/models/usuario_model.dart';
 import '../../domain/repositories/auth_repository.dart';
@@ -101,13 +104,88 @@ class AuthRepositoryImpl implements AuthRepository {
     );
   }
 
+  @override
+  Future<UsuarioModel> atualizarNome({required String nome}) {
+    return comTratamentoFirebase(() async {
+      final atualizado = await _authService.atualizarPerfil(nome: nome);
+      await _firestoreService.atualizarPerfilUsuario(
+        atualizado.uid,
+        nome: nome,
+      );
+      final salvo = await _firestoreService.obterUsuario(atualizado.uid);
+      return atualizado
+          .comFoto(salvo?.foto ?? atualizado.foto)
+          .comPessoaVinculada(salvo?.pessoaId);
+    });
+  }
+
+  @override
+  Future<UsuarioModel> atualizarFotoPerfil({
+    required Uint8List bytes,
+    required String nomeArquivo,
+    required String mimeType,
+  }) {
+    return comTratamentoFirebase(() async {
+      final atual = _authService.currentUser;
+      if (atual == null) {
+        throw const AppException('Você precisa estar autenticado.');
+      }
+      final dataUrl = 'data:$mimeType;base64,${base64Encode(bytes)}';
+      await _firestoreService.atualizarPerfilUsuario(
+        atual.uid,
+        foto: dataUrl,
+        atualizarFoto: true,
+      );
+      final salvo = await _firestoreService.obterUsuario(atual.uid);
+      final base = atual.nome.isNotEmpty ? atual : (salvo ?? atual);
+      return base.comFoto(dataUrl).comPessoaVinculada(salvo?.pessoaId);
+    });
+  }
+
+  @override
+  Future<UsuarioModel> removerFotoPerfil() {
+    return comTratamentoFirebase(() async {
+      final atualizado = await _authService.atualizarPerfil(
+        foto: null,
+        atualizarFoto: true,
+      );
+      await _firestoreService.atualizarPerfilUsuario(
+        atualizado.uid,
+        foto: null,
+        atualizarFoto: true,
+      );
+      final salvo = await _firestoreService.obterUsuario(atualizado.uid);
+      return atualizado.comFoto(null).comPessoaVinculada(salvo?.pessoaId);
+    });
+  }
+
+  @override
+  Future<void> alterarSenha({
+    required String senhaAtual,
+    required String novaSenha,
+  }) {
+    return comTratamentoFirebase(
+      () => _authService.alterarSenha(
+        senhaAtual: senhaAtual,
+        novaSenha: novaSenha,
+      ),
+    );
+  }
+
+  @override
+  Future<void> enviarRecuperacaoSenha({required String email}) {
+    return comTratamentoFirebase(
+      () => _authService.enviarEmailRecuperacaoSenha(email),
+    );
+  }
+
   /// Mantém o documento em `usuarios` atualizado com os dados do Firebase
-  /// Authentication e devolve o perfil com o vínculo de pessoa salvo.
+  /// Authentication e devolve o perfil com foto e vínculo salvos.
   Future<UsuarioModel> _sincronizarPerfil(UsuarioModel usuario) async {
     final salvo = await _firestoreService.obterUsuario(usuario.uid);
-    final atualizado = usuario.copyWith(
-      nome: usuario.nome.isNotEmpty ? usuario.nome : salvo?.nome,
-    );
+    final atualizado = usuario
+        .copyWith(nome: usuario.nome.isNotEmpty ? usuario.nome : salvo?.nome)
+        .comFoto(salvo != null ? salvo.foto : usuario.foto);
     await _firestoreService.salvarUsuario(atualizado);
     return atualizado.comPessoaVinculada(salvo?.pessoaId);
   }

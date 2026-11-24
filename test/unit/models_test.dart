@@ -130,5 +130,22 @@ void main() {
       expect(UsuarioModel.fromMap(mapa, uid: 'uid_ana').pessoaId, 'pes_1');
       expect(usuario.comPessoaVinculada(null).pessoaId, isNull);
     });
+
+    test('comFoto, podeAlterarSenha e igualdade consideram nome e foto', () {
+      final comFoto = usuarioAna.comFoto('https://vps.local/foto.webp');
+      expect(comFoto.foto, 'https://vps.local/foto.webp');
+      expect(comFoto, isNot(equals(usuarioAna)));
+      expect(comFoto.comFoto(null), equals(usuarioAna));
+      expect(
+        usuarioAna.copyWith(nome: 'Outro Nome'),
+        isNot(equals(usuarioAna)),
+      );
+
+      expect(usuarioAna.podeAlterarSenha, isTrue);
+      expect(
+        usuarioAna.copyWith(provider: 'google.com').podeAlterarSenha,
+        isFalse,
+      );
+    });
   });
 }

@@ -1,8 +1,11 @@
+import 'dart:convert';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:piramid_game/core/di/injection.dart';
 import 'package:piramid_game/core/router/app_router.dart';
+import 'package:piramid_game/data/services/image_picker_service.dart';
 import 'package:piramid_game/main.dart';
 import 'package:piramid_game/presentation/viewmodels/auth_viewmodel.dart';
 import 'package:piramid_game/presentation/viewmodels/theme_viewmodel.dart';
@@ -20,6 +23,7 @@ void main() {
       pessoaRepository: backend.pessoas,
       avaliacaoRepository: backend.avaliacoes,
       preferenceRepository: backend.preferencias,
+      imagePickerService: backend.imagePicker,
     );
   });
 
@@ -225,5 +229,103 @@ void main() {
     expect(find.text('Excluir Cadastro'), findsNothing);
     expect(find.text('Outro usuário'), findsOneWidget);
     expect(find.text('Editar Cadastro'), findsOneWidget);
+  });
+
+  testWidgets('recuperação de senha na tela de login envia solicitação', (
+    tester,
+  ) async {
+    await abrirApp(tester);
+
+    await tester.enterText(
+      find.byKey(const Key('login_email')),
+      'ana@ifpr.edu.br',
+    );
+    await tocar(tester, find.byKey(const Key('login_esqueci_senha')));
+    expect(find.text('Recuperar senha'), findsOneWidget);
+
+    await tocar(tester, find.byKey(const Key('recuperar_enviar')));
+    expect(backend.auth.recuperacoesEnviadas, ['ana@ifpr.edu.br']);
+    expect(
+      find.text(
+        'Enviamos um link de redefinição de senha para ana@ifpr.edu.br.',
+      ),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'perfil permite editar nome, trocar/remover foto e alterar senha',
+    (tester) async {
+      backend.auth.entrarComo(usuarioAna);
+      backend.imagePicker.proximaFoto = FotoSelecionada(
+        bytes: base64Decode(
+          'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==',
+        ),
+        nomeArquivo: 'avatar.png',
+        mimeType: 'image/png',
+      );
+
+      await abrirApp(tester);
+      await tocar(tester, find.byKey(const Key('home_avatar_perfil')));
+
+      expect(find.text('Dados do perfil'), findsOneWidget);
+      expect(find.text('Segurança e senha'), findsOneWidget);
+
+      // Editar nome
+      await tester.enterText(
+        find.byKey(const Key('perfil_nome')),
+        'Beatriz Silva',
+      );
+      await tocar(tester, find.byKey(const Key('perfil_salvar_nome')));
+      expect(backend.auth.logado?.nome, 'Beatriz Silva');
+      expect(find.text('Beatriz'), findsOneWidget);
+
+      // Alterar foto via galeria
+      await tocar(tester, find.byKey(const Key('perfil_alterar_foto')));
+      await tocar(tester, find.byKey(const Key('foto_opcao_galeria')));
+      expect(backend.auth.logado?.foto, startsWith('data:image/png;base64,'));
+      expect(
+        find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage),
+        findsWidgets,
+      );
+      expect(find.byKey(const Key('perfil_remover_foto')), findsOneWidget);
+
+      // Remover foto
+      await tocar(tester, find.byKey(const Key('perfil_remover_foto')));
+      await tocar(tester, find.text('Remover'));
+      expect(backend.auth.logado?.foto, isNull);
+      expect(
+        find.byWidgetPredicate((w) => w is Image && w.image is MemoryImage),
+        findsNothing,
+      );
+      expect(find.byKey(const Key('perfil_remover_foto')), findsNothing);
+
+      // Alterar senha
+      await tester.enterText(
+        find.byKey(const Key('perfil_senha_atual')),
+        '123456',
+      );
+      await tester.enterText(
+        find.byKey(const Key('perfil_nova_senha')),
+        'nova654',
+      );
+      await tester.enterText(
+        find.byKey(const Key('perfil_confirmar_senha')),
+        'nova654',
+      );
+      await tocar(tester, find.byKey(const Key('perfil_alterar_senha')));
+      expect(backend.auth.contas[usuarioAna.email]?.senha, 'nova654');
+    },
+  );
+
+  testWidgets('perfil de conta Google oculta formulário de senha', (
+    tester,
+  ) async {
+    backend.auth.entrarComo(usuarioJoao.copyWith(provider: 'google.com'));
+    await abrirApp(tester);
+
+    await tocar(tester, find.text('Perfil'));
+    expect(find.byKey(const Key('perfil_alterar_senha')), findsNothing);
+    expect(find.textContaining('autenticada com o Google'), findsOneWidget);
   });
 }

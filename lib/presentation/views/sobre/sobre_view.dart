@@ -141,8 +141,8 @@ class SobreView extends StatelessWidget {
               icon: Icons.cloud_done_outlined,
               title: 'Armazenamento & Autenticação',
               content:
-                  '• Firestore: Armazena coleções remotas de usuários, pessoas cadastradas e avaliações de modo multiusuário. Assim os dados ficam disponíveis em qualquer dispositivo, bastando entrar com a mesma conta.\n\n'
-                  '• Firebase Authentication: Gerencia o acesso com segurança através de login por E-mail/Senha e autenticação integrada via Google.\n\n'
+                  '• Firestore: Armazena coleções remotas de usuários (incluindo foto de perfil otimizada), pessoas cadastradas e avaliações de modo multiusuário. Assim os dados ficam disponíveis em qualquer dispositivo, bastando entrar com a mesma conta.\n\n'
+                  '• Firebase Authentication: Gerencia o acesso com segurança através de login por E-mail/Senha e autenticação integrada via Google, além de troca e recuperação de senha.\n\n'
                   '• SharedPreferences: Utilizado de maneira complementar estritamente para preferências locais de tema (claro/escuro) e cache auxiliar de sessão. Senhas nunca são guardadas no aparelho.',
             ),
             const SizedBox(height: 12),

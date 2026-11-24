@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piramid_game/core/di/injection.dart';
 import 'package:piramid_game/domain/models/criterios_avaliacao.dart';
@@ -59,6 +61,43 @@ void main() {
       expect(vm.isAuthenticated.value, isFalse);
       expect(backend.preferencias.cache, isNull);
     });
+
+    test(
+      'atualizarPerfil, foto, removerFoto, alterarSenha e recuperarSenha',
+      () async {
+        backend.auth.entrarComo(usuarioAna);
+        final vm = sl<AuthViewModel>();
+        await vm.verificarSessaoCommand();
+
+        final nomeRes = await vm.atualizarPerfilCommand('Ana Atualizada');
+        expect(nomeRes.isSuccess, isTrue);
+        expect(vm.currentUser.value?.nome, 'Ana Atualizada');
+        expect(vm.nomeEmCache.value, 'Ana Atualizada');
+
+        final fotoRes = await vm.atualizarFotoCommand(
+          Uint8List.fromList([1, 2, 3, 4]),
+          'avatar.png',
+          'image/png',
+        );
+        expect(fotoRes.isSuccess, isTrue);
+        expect(vm.currentUser.value?.foto, isNotNull);
+
+        final removerRes = await vm.removerFotoCommand();
+        expect(removerRes.isSuccess, isTrue);
+        expect(vm.currentUser.value?.foto, isNull);
+
+        final senhaRes = await vm.alterarSenhaCommand(
+          '123456',
+          'nova123',
+          'nova123',
+        );
+        expect(senhaRes.isSuccess, isTrue);
+
+        final recRes = await vm.recuperarSenhaCommand(usuarioAna.email);
+        expect(recRes.isSuccess, isTrue);
+        expect(backend.auth.recuperacoesEnviadas, [usuarioAna.email]);
+      },
+    );
   });
 
   group('PessoaViewModel', () {

@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:piramid_game/core/di/injection.dart';
 import 'package:piramid_game/core/result/app_exception.dart';
@@ -119,6 +121,137 @@ void main() {
         expect(r.dataOrNull?.pessoaId, 'pes_x');
       },
     );
+  });
+
+  group('Perfil e Senha', () {
+    setUp(() => backend.auth.entrarComo(usuarioAna));
+
+    test('atualiza nome do usuário com trim e atualiza cache', () async {
+      final falhouCurto = await auth.atualizarNome(nome: 'Ab');
+      expect(erroDe(falhouCurto), contains('3 caracteres'));
+
+      final r = await auth.atualizarNome(nome: '  Ana Clara Silva  ');
+      expect(r.isSuccess, isTrue);
+      expect(r.dataOrNull?.nome, 'Ana Clara Silva');
+      expect(backend.preferencias.cache?.nome, 'Ana Clara Silva');
+    });
+
+    test('atualiza e remove foto validando tamanho e formato', () async {
+      final vazia = await auth.atualizarFotoPerfil(
+        bytes: Uint8List(0),
+        nomeArquivo: 'vazia.png',
+        mimeType: 'image/png',
+      );
+      expect(erroDe(vazia), contains('vazia'));
+
+      final grande = await auth.atualizarFotoPerfil(
+        bytes: Uint8List(600 * 1024 + 1),
+        nomeArquivo: 'grande.png',
+        mimeType: 'image/png',
+      );
+      expect(erroDe(grande), contains('600 KB'));
+
+      final formatoInvalido = await auth.atualizarFotoPerfil(
+        bytes: Uint8List.fromList([1, 2, 3]),
+        nomeArquivo: 'doc.pdf',
+        mimeType: 'application/pdf',
+      );
+      expect(erroDe(formatoInvalido), contains('Formato inválido'));
+
+      final ok = await auth.atualizarFotoPerfil(
+        bytes: Uint8List.fromList([1, 2, 3, 4]),
+        nomeArquivo: 'avatar.png',
+        mimeType: 'image/png',
+      );
+      expect(ok.isSuccess, isTrue);
+      expect(ok.dataOrNull?.foto, startsWith('data:image/png;base64,'));
+      expect(backend.preferencias.cache?.foto, ok.dataOrNull?.foto);
+
+      final removida = await auth.removerFotoPerfil();
+      expect(removida.isSuccess, isTrue);
+      expect(removida.dataOrNull?.foto, isNull);
+      expect(backend.preferencias.cache?.foto, isNull);
+    });
+
+    test('alterar senha valida regras e bloqueia conta Google', () async {
+      expect(
+        erroDe(
+          await auth.alterarSenha(
+            senhaAtual: 'errada',
+            novaSenha: 'nova123',
+            confirmacaoSenha: 'nova123',
+          ),
+        ),
+        'E-mail ou senha incorretos.',
+      );
+
+      expect(
+        erroDe(
+          await auth.alterarSenha(
+            senhaAtual: '123456',
+            novaSenha: '123',
+            confirmacaoSenha: '123',
+          ),
+        ),
+        contains('6 caracteres'),
+      );
+
+      expect(
+        erroDe(
+          await auth.alterarSenha(
+            senhaAtual: '123456',
+            novaSenha: 'nova123',
+            confirmacaoSenha: 'outra123',
+          ),
+        ),
+        contains('confere'),
+      );
+
+      expect(
+        erroDe(
+          await auth.alterarSenha(
+            senhaAtual: '123456',
+            novaSenha: '123456',
+            confirmacaoSenha: '123456',
+          ),
+        ),
+        contains('diferente'),
+      );
+
+      final ok = await auth.alterarSenha(
+        senhaAtual: '123456',
+        novaSenha: 'nova123',
+        confirmacaoSenha: 'nova123',
+      );
+      expect(ok.isSuccess, isTrue);
+      expect(
+        (await auth.login(email: usuarioAna.email, senha: 'nova123')).isSuccess,
+        isTrue,
+      );
+
+      backend.auth.entrarComo(usuarioJoao.copyWith(provider: 'google.com'));
+      expect(
+        erroDe(
+          await auth.alterarSenha(
+            senhaAtual: '123456',
+            novaSenha: 'nova123',
+            confirmacaoSenha: 'nova123',
+          ),
+        ),
+        contains('Google'),
+      );
+    });
+
+    test('recuperar senha valida e-mail e envia solicitação', () async {
+      expect(
+        erroDe(await auth.recuperarSenha(email: 'invalido')),
+        contains('e-mail'),
+      );
+
+      final ok = await auth.recuperarSenha(email: ' ana@ifpr.edu.br ');
+      expect(ok.isSuccess, isTrue);
+      expect(backend.auth.recuperacoesEnviadas, ['ana@ifpr.edu.br']);
+    });
   });
 
   group('Pessoas', () {

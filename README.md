@@ -6,7 +6,8 @@ Permite cadastrar pessoas do campus e avaliá-las em 15 critérios descontraído
 
 ## Funcionalidades
 
-- Cadastro e login com e-mail/senha e login com conta Google (Firebase Authentication)
+- Cadastro e login com e-mail/senha, recuperação de senha e login com conta Google (Firebase Authentication)
+- Seção de Perfil completa: edição de nome, upload/troca/remoção de foto de perfil (salva otimizada no Firestore), alteração de senha com reautenticação e gerenciamento do vínculo de conta
 - Sessão mantida ao reabrir o app (a validade é sempre decidida pelo Firebase)
 - Cadastro, listagem com busca e filtro por curso, detalhes, edição e remoção de pessoas
 - Curso (INFO, MEC, MAMB, PROD, TADS, TGA), turma/ano (1998–2026) e data de nascimento por seleção
@@ -32,7 +33,7 @@ Permite cadastrar pessoas do campus e avaliá-las em 15 critérios descontraído
 
 ## Tecnologias
 
-Flutter, Firebase Authentication, Cloud Firestore, SharedPreferences, go_router e signals_flutter.
+Flutter, Firebase Authentication, Cloud Firestore, SharedPreferences, go_router, signals_flutter e image_picker.
 
 ## Arquitetura
 
@@ -47,7 +48,7 @@ lib/
 ├── core/           # Command, Result, injeção de dependências, rotas e tema
 ├── data/
 │   ├── errors/     # Conversão de erros do Firebase em mensagens para o usuário
-│   ├── services/   # AuthService, GoogleAuthService, FirestoreService, LocalStorageService
+│   ├── services/   # AuthService, GoogleAuthService, FirestoreService, ImagePickerService, LocalStorageService
 │   └── repositories/
 ├── domain/
 │   ├── models/

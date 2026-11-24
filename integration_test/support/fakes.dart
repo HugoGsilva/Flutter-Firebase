@@ -1,4 +1,8 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:piramid_game/core/result/app_exception.dart';
+import 'package:piramid_game/data/services/image_picker_service.dart';
 import 'package:piramid_game/domain/models/avaliacao_model.dart';
 import 'package:piramid_game/domain/models/criterios_avaliacao.dart';
 import 'package:piramid_game/domain/models/pessoa_model.dart';
@@ -12,12 +16,16 @@ import 'package:piramid_game/domain/repositories/preference_repository.dart';
 class FakeAuthRepository implements AuthRepository {
   final Map<String, ({UsuarioModel usuario, String senha})> contas = {};
   final Map<String, UsuarioModel> perfis = {};
+  final List<String> recuperacoesEnviadas = [];
   UsuarioModel? logado;
   UsuarioModel? contaGoogle;
   int _seq = 0;
 
-  void entrarComo(UsuarioModel usuario) {
+  void entrarComo(UsuarioModel usuario, {String senha = '123456'}) {
     perfis[usuario.uid] = usuario;
+    if (usuario.provider == 'password') {
+      contas.putIfAbsent(usuario.email, () => (usuario: usuario, senha: senha));
+    }
     logado = usuario;
   }
 
@@ -86,7 +94,70 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<void> vincularPessoa(String uid, String? pessoaId) async {
     final perfil = perfis[uid] ?? logado!;
-    perfis[uid] = perfil.comPessoaVinculada(pessoaId);
+    final atualizado = perfil.comPessoaVinculada(pessoaId);
+    perfis[uid] = atualizado;
+    if (logado?.uid == uid) {
+      logado = atualizado;
+    }
+  }
+
+  @override
+  Future<UsuarioModel> atualizarNome({required String nome}) async {
+    final atual = logado!;
+    final perfil = (perfis[atual.uid] ?? atual).copyWith(nome: nome);
+    perfis[atual.uid] = perfil;
+    final conta = contas[perfil.email];
+    if (conta != null) {
+      contas[perfil.email] = (usuario: perfil, senha: conta.senha);
+    }
+    return logado = perfil;
+  }
+
+  @override
+  Future<UsuarioModel> atualizarFotoPerfil({
+    required Uint8List bytes,
+    required String nomeArquivo,
+    required String mimeType,
+  }) async {
+    final atual = logado!;
+    final url = 'data:$mimeType;base64,${base64Encode(bytes)}';
+    final perfil = (perfis[atual.uid] ?? atual).comFoto(url);
+    perfis[atual.uid] = perfil;
+    final conta = contas[perfil.email];
+    if (conta != null) {
+      contas[perfil.email] = (usuario: perfil, senha: conta.senha);
+    }
+    return logado = perfil;
+  }
+
+  @override
+  Future<UsuarioModel> removerFotoPerfil() async {
+    final atual = logado!;
+    final perfil = (perfis[atual.uid] ?? atual).comFoto(null);
+    perfis[atual.uid] = perfil;
+    final conta = contas[perfil.email];
+    if (conta != null) {
+      contas[perfil.email] = (usuario: perfil, senha: conta.senha);
+    }
+    return logado = perfil;
+  }
+
+  @override
+  Future<void> alterarSenha({
+    required String senhaAtual,
+    required String novaSenha,
+  }) async {
+    final atual = logado!;
+    final conta = contas[atual.email];
+    if (conta == null || conta.senha != senhaAtual) {
+      throw const AppException('E-mail ou senha incorretos.');
+    }
+    contas[atual.email] = (usuario: conta.usuario, senha: novaSenha);
+  }
+
+  @override
+  Future<void> enviarRecuperacaoSenha({required String email}) async {
+    recuperacoesEnviadas.add(email);
   }
 }
 
@@ -189,6 +260,16 @@ class FakePreferenceRepository implements PreferenceRepository {
   Future<void> limparSessao() async => cache = null;
 }
 
+class FakeImagePickerService implements ImagePickerService {
+  FotoSelecionada? proximaFoto;
+
+  @override
+  Future<FotoSelecionada?> selecionarDaGaleria() async => proximaFoto;
+
+  @override
+  Future<FotoSelecionada?> capturarDaCamera() async => proximaFoto;
+}
+
 /// Conjunto de repositórios falsos já interligados.
 class FakeBackend {
   FakeBackend() {
@@ -199,6 +280,7 @@ class FakeBackend {
   final avaliacoes = FakeAvaliacaoRepository();
   late final FakePessoaRepository pessoas;
   final preferencias = FakePreferenceRepository();
+  final imagePicker = FakeImagePickerService();
 }
 
 const usuarioAna = UsuarioModel(

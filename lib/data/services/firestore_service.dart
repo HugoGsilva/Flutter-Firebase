@@ -52,6 +52,23 @@ class FirestoreService {
     }, SetOptions(merge: true));
   }
 
+  Future<void> atualizarPerfilUsuario(
+    String uid, {
+    String? nome,
+    String? foto,
+    bool atualizarFoto = false,
+  }) async {
+    final dados = <String, dynamic>{};
+    if (nome != null) {
+      dados['nome'] = nome;
+    }
+    if (atualizarFoto) {
+      dados['foto'] = foto;
+    }
+    if (dados.isEmpty) return;
+    await _usuarios.doc(uid).set(dados, SetOptions(merge: true));
+  }
+
   // --- Pessoas ---
 
   Future<String> salvarPessoa(PessoaModel pessoa) async {

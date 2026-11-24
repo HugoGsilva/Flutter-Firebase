@@ -10,10 +10,12 @@ import '../../viewmodels/home_viewmodel.dart';
 import '../../viewmodels/pessoa_viewmodel.dart';
 import '../../viewmodels/ranking_viewmodel.dart';
 import '../../viewmodels/theme_viewmodel.dart';
+import '../perfil/perfil_view.dart';
 import '../pessoas/pessoas_list_view.dart';
 import '../ranking/ranking_global_view.dart';
 import '../ranking/ranking_pessoal_view.dart';
 import '../sobre/sobre_view.dart';
+import '../widgets/avatar_usuario.dart';
 import '../widgets/feedback.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -32,6 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
     PessoasListView(),
     RankingPessoalView(),
     RankingGlobalView(),
+    PerfilView(),
     SobreView(),
   ];
 
@@ -45,6 +48,11 @@ class _HomeScreenState extends State<HomeScreen> {
         sl<RankingViewModel>().carregarRankingPessoalCommand();
       case HomeViewModel.abaRankingGlobal:
         sl<RankingViewModel>().carregarRankingGlobalCommand();
+      case HomeViewModel.abaPerfil:
+        final pessoaVm = sl<PessoaViewModel>();
+        if (pessoaVm.pessoas.value.isEmpty) {
+          pessoaVm.carregarPessoasCommand();
+        }
     }
   }
 
@@ -71,19 +79,49 @@ class _HomeScreenState extends State<HomeScreen> {
       builder: (context) {
         final selectedIndex = _homeViewModel.currentTab.value;
         final isDark = _themeViewModel.isDarkMode.value;
-        final nome = _authViewModel.currentUser.value?.nome ?? '';
+        final usuario = _authViewModel.currentUser.value;
+        final nome = usuario?.nome ?? '';
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('PiramidGame'),
             actions: [
-              if (nome.isNotEmpty)
+              if (usuario != null)
                 Padding(
                   padding: const EdgeInsets.only(right: 4),
-                  child: Center(
-                    child: Text(
-                      nome.split(' ').first,
-                      style: Theme.of(context).textTheme.labelLarge,
+                  child: Tooltip(
+                    message: 'Abrir perfil',
+                    child: InkWell(
+                      key: const Key('home_avatar_perfil'),
+                      borderRadius: BorderRadius.circular(24),
+                      onTap: () => _selecionarAba(HomeViewModel.abaPerfil),
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 6,
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            AvatarUsuario(
+                              nome: nome,
+                              fotoUrl: usuario.foto,
+                              radius: 15,
+                            ),
+                            if (nome.isNotEmpty) ...[
+                              const SizedBox(width: 8),
+                              ConstrainedBox(
+                                constraints: const BoxConstraints(maxWidth: 96),
+                                child: Text(
+                                  nome.split(' ').first,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.labelLarge,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
                     ),
                   ),
                 ),
@@ -120,6 +158,11 @@ class _HomeScreenState extends State<HomeScreen> {
                 icon: Icon(Icons.public_outlined),
                 selectedIcon: Icon(Icons.public_rounded),
                 label: 'Ranking Global',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person_rounded),
+                label: 'Perfil',
               ),
               NavigationDestination(
                 icon: Icon(Icons.info_outline),
